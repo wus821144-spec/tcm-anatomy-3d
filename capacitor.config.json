@@ -1,0 +1,9 @@
+{
+  "appId": "com.tcmuniversity.anatomy3d.pro",
+  "appName": "中医解剖3D特供版",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true
+  }
+}
