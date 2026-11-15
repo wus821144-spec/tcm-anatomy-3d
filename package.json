@@ -1,0 +1,19 @@
+{
+  "name": "tcm-university-anatomy-app",
+  "version": "4.0.0",
+  "description": "Commercial-Grade Offline Dual-Gender 3D Human Anatomy & TCM University App",
+  "private": true,
+  "scripts": {
+    "bundle": "esbuild src/app.js --bundle --minify --outfile=www/app.bundle.js --format=iife",
+    "copy-draco": "mkdir -p www/draco && cp -r node_modules/three/examples/jsm/libs/draco/gltf/* www/draco/"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}
