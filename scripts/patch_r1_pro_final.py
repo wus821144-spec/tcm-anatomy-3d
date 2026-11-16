@@ -3,9 +3,12 @@ import os, re, json
 data_path = 'www/data/anatomy_tcm_data.json'
 if os.path.exists(data_path):
   d = json.load(open(data_path, encoding='utf-8'))
+  z_map = {'head': 'zone_head', 'torso': 'zone_torso', 'arm_l': 'zone_arm_l', 'arm_r': 'zone_arm_r', 'leg_l': 'zone_leg_l', 'leg_r': 'zone_leg_r'}
   seen_names = set()
   dedup_pts = []
   for p in d.get('points', []):
+    if p.get('zone') in z_map:
+      p['zone'] = z_map[p['zone']]
     nm = p.get('name')
     if nm and nm in seen_names:
       continue
@@ -13,6 +16,9 @@ if os.path.exists(data_path):
       seen_names.add(nm)
     dedup_pts.append(p)
   d['points'] = dedup_pts
+  for a in d.get('full_acupoints_catalog', []):
+    if a.get('zone') in z_map:
+      a['zone'] = z_map[a['zone']]
   open(data_path, 'w', encoding='utf-8').write(json.dumps(d, ensure_ascii=False, indent=2))
 
 dm_path = 'src/data_manager.js'
@@ -41,7 +47,8 @@ if os.path.exists(e3d_path):
       if (pt.pos && Math.abs(pt.pos[0]) > 0.018 && !String(pt.id || '').includes('_R')) {
         const mr = new THREE.Mesh(geo, m.material);
         mr.position.set(-pt.pos[0], pt.pos[1], pt.pos[2]);
-        mr.userData = { data: { ...pt, id: pt.id + '_R', pos: [-pt.pos[0], pt.pos[1], pt.pos[2]] }, isMirrorRight: true };
+        const rZone = pt.zone === 'zone_arm_l' ? 'zone_arm_r' : (pt.zone === 'zone_leg_l' ? 'zone_leg_r' : pt.zone);
+        mr.userData = { data: { ...pt, id: pt.id + '_R', zone: rZone, pos: [-pt.pos[0], pt.pos[1], pt.pos[2]] }, isMirrorRight: true };
         mr.visible = false;
         pointGroup.add(mr);
         state.pointMeshes.push(mr);
