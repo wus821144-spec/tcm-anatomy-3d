@@ -117,6 +117,7 @@ jobs:
           git checkout -- src/micro_anatomy_engine.js src/tcm_meridian_engine.js
           python3 scripts/enrich_tcm_tier1.py
           python3 scripts/patch_tier23_light.py
+          python3 scripts/patch_industrial_fix.py
           ls -lh www/models/hra_*.glb || true
           
   
