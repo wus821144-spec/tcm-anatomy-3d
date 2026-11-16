@@ -118,6 +118,7 @@ jobs:
           python3 scripts/enrich_tcm_tier1.py
           python3 scripts/patch_tier23_light.py
           python3 scripts/patch_industrial_fix.py
+          python3 scripts/patch_final_polish.py
           ls -lh www/models/hra_*.glb || true
           
   
