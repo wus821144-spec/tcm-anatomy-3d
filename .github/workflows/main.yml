@@ -61,6 +61,8 @@ jobs:
         run: |
           mkdir -p www/models
           sed -i 's/export_draco_mesh_compression_enable=True/export_draco_mesh_compression_enable=False/g' scripts/split_z_anatomy_regions.py
+          sed -i 's/if any(c in combined for c in \["ui", "menu", "labels", "reference", "planes", "annotations", "text"\]):/if any(c in {"ui", "menu", "labels", "annotations", "reference lines", "planes"} for c in col_names):/g' scripts/split_z_anatomy_regions.py
+          sed -i 's/if any(b in combined for b in BAD_NAME_KWS):/if any(b in low for b in ["_label", "text_label", "arrow", "gizmo", "widget", "bounding_box", "backdrop", "background", "floor", "stage", "cursor", "pointer", "cross_section", "diagram", "enlargement", "inset", "legend", "ui_", "_ui"]):/g' scripts/split_z_anatomy_regions.py
           blender --background "$BLEND_FILE" --python-exit-code 1 --python scripts/split_z_anatomy_regions.py -- www/models
           ls -lh www/models/*.glb
 
