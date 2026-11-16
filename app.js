@@ -21,7 +21,10 @@ installGlobalErrorGuards(toastEl);
 
 const engine = create3DEngine(document.getElementById('canvas-wrap'), toastEl);
 const { THREE, camera, renderer, controls, clipPlaneZ, anatomyGroup, zoneGroup, toolGroup, focusRing, state } = engine;
-
+const meridianOverlay = createMeridianOverlay(engine.scene);
+const biomechEngine = createBiomechEngine(engine.scene);
+const microEngine = createMicroAnatomyEngine(engine.scene);
+let quizCoach = null;
 bindWebGLContextGuards(renderer, toastEl);
 bindResponsiveResize(camera, renderer);
 
@@ -229,7 +232,7 @@ if (btnKbMode) {
 
   renderKnowledgeBase('all');
 
-  quizCoach = createQuizCoach({ dataset, engine, focusZone, openDrawer, toastEl });
+  quizCoach = createQuizCoach({ dataset, engine, enterZone, openDrawer, toastEl });
   const btnQuiz = document.getElementById('btn-start-quiz');
   if (btnQuiz) btnQuiz.addEventListener('click', () => quizCoach.startNextQuestion());
   const quizBox = document.getElementById('quiz-box');
@@ -264,7 +267,7 @@ if (btnKbMode) {
               if (p) {
                 document.querySelector('[data-view="view-3d"]').click();
                 const z = (dataset.zones || []).find((zx) => zx.id === p.zone);
-                if (z) focusZone(z);
+                if (z) enterZone(z);
                 openDrawer(p);
               }
             });
