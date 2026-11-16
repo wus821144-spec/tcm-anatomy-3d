@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>人体解剖 · 中医药大学特供版</title>
+  <style>
+    :root {
+      --bg-core: #040812;
+      --bg-glow: #0f1b33;
+      --glass: rgba(12, 19, 36, 0.86);
+      --border: rgba(255, 255, 255, 0.11);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --tcm: #f59e0b;
+      --student: #10b981;
+      --female: #f472b6;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+      background: radial-gradient(circle at 50% 35%, var(--bg-glow) 0%, var(--bg-core) 75%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", sans-serif;
+    }
+    .glass {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    /* Splash Screen */
+    #splash {
+      position: fixed; inset: 0; z-index: 100;
+      background: radial-gradient(circle at 50% 35%, #122140 0%, #040812 80%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px; text-align: center; transition: opacity 0.4s ease;
+    }
+    .splash-logo {
+      width: 68px; height: 68px; border-radius: 20px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.25), rgba(245,158,11,0.25));
+      border: 1px solid rgba(56,189,248,0.45);
+      display: flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 14px;
+    }
+
+    /* App Views */
+    .app-view { position: fixed; inset: 0 0 60px 0; overflow-y: auto; display: none; padding: calc(env(safe-area-inset-top, 10px) + 8px) 14px 20px; }
+    .app-view.active { display: block; }
+    #view-3d { padding: 0; overflow: hidden; }
+    #canvas-wrap { position: absolute; inset: 0; touch-action: none; }
+
+    /* Top Bar in 3D View */
+    .top-stack { position: absolute; top: calc(env(safe-area-inset-top, 10px) + 6px); left: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; z-index: 25; pointer-events: none; }
+    .top-row { display: flex; gap: 6px; align-items: center; pointer-events: auto; }
+    .tool-strip { display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; padding-bottom: 2px; pointer-events: auto; scrollbar-width: none; }
+    .tool-strip::-webkit-scrollbar { display: none; }
+    .search-box { flex: 1; min-width: 120px; display: flex; align-items: center; padding: 7px 11px; border-radius: 12px; }
+    .search-box input { width: 100%; background: transparent; border: none; outline: none; color: var(--text); font-size: 13px; }
+    .seg-gender { display: flex; border-radius: 12px; padding: 2px; gap: 2px; flex-shrink: 0; }
+    .seg-btn { padding: 5px 10px; border: none; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; border-radius: 9px; cursor: pointer; }
+    .seg-btn.active-male { background: rgba(56,189,248,0.22); color: var(--accent); }
+    .seg-btn.active-female { background: rgba(244,114,182,0.24); color: var(--female); }
+    .btn { padding: 6px 10px; border-radius: 10px; font-size: 11.5px; font-weight: 600; color: var(--text); cursor: pointer; flex-shrink: 0; }
+    .btn.on { border-color: var(--accent); color: var(--accent); }
+
+    .left-dock { position: absolute; left: 10px; top: calc(env(safe-area-inset-top, 10px) + 96px); width: 146px; padding: 9px 10px; border-radius: 14px; font-size: 11px; color: var(--muted); z-index: 20; display: none; }
+    .left-dock.open { display: block; }
+    .left-dock input { width: 100%; margin: 4px 0 8px; accent-color: var(--accent); }
+    .right-dock { position: absolute; right: 10px; top: calc(env(safe-area-inset-top, 10px) + 96px); display: flex; flex-direction: column; gap: 5px; z-index: 20; }
+    .layer-btn { padding: 6px 9px; border-radius: 10px; font-size: 11px; color: var(--muted); cursor: pointer; text-align: center; }
+    .layer-btn.on { color: var(--accent); border-color: rgba(56,189,248,0.55); font-weight: 600; }
+
+    .toast { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; font-size: 11.5px; color: #e2e8f0; z-index: 15; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Bottom App Tab Bar */
+    .bottom-nav {
+      position: fixed; left: 0; right: 0; bottom: 0; height: calc(60px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      background: rgba(8, 13, 26, 0.96); border-top: 1px solid var(--border);
+      display: grid; grid-template-columns: repeat(4, 1fr); z-index: 40;
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: none; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; }
+    .nav-item.active { color: var(--accent); }
+
+    /* Drawer */
+    .drawer {
+      position: fixed; left: 0; right: 0; bottom: 0; padding: 14px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+      border-radius: 22px 22px 0 0; z-index: 50; max-height: 70vh; overflow-y: auto;
+      transform: translateY(108%); transition: transform 0.25s ease;
+    }
+    .drawer.open { transform: translateY(0); }
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+    .tab-btn { padding: 7px; border-radius: 9px; border: 1px solid var(--border); background: rgba(15,23,42,0.6); color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; }
+    .tab-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.14); }
+    .block { background: rgba(30,41,59,0.55); border: 1px solid var(--border); border-radius: 12px; padding: 11px; margin-top: 8px; font-size: 12.5px; line-height: 1.6; }
+    .hl-row { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+    .hl-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+    .hl-dot.selected { border-color: #fff; transform: scale(1.12); }
+    textarea { width: 100%; min-height: 68px; background: #070d1a; color: var(--text); border: 1px solid var(--border); border-radius: 9px; padding: 8px; font-size: 12.5px; }
+
+    /* Cards in Encyclopedia / Study / Settings */
+    .page-title { font-size: 18px; font-weight: 700; margin: 4px 0 12px; }
+    .card { border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+    .chip-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; }
+    .chip { padding: 5px 11px; border-radius: 999px; font-size: 12px; white-space: nowrap; cursor: pointer; color: var(--muted); }
+    .chip.active { color: var(--accent); border-color: var(--accent); background: rgba(56,189,248,0.12); }
+  
+    /* v27 Commercial Medical UI Polish */
+    .glass {
+      background: rgba(10, 17, 34, 0.88);
+      border: 1px solid rgba(56, 189, 248, 0.16);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    .btn {
+      transition: transform 0.12s ease, border-color 0.2s ease, background 0.2s ease;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn.on {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.28), rgba(14, 165, 233, 0.18));
+      border-color: rgba(56, 189, 248, 0.65);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.22);
+    }
+    .card {
+      border-radius: 14px;
+      transition: border-color 0.2s ease;
+    }
+    .drawer {
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      border-top: 1px solid rgba(56, 189, 248, 0.3);
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .nav-bar {
+      border-top: 1px solid rgba(56, 189, 248, 0.18);
+      background: rgba(6, 11, 24, 0.94);
+    }
+
+  </style>
+</head>
+<body>
+  <!-- Splash Screen -->
+  <div id="splash">
+    <div class="splash-logo">🧬</div>
+    <h1 style="font-size:20px;margin:0 0 6px;">人体解剖 · 中医药大学特供版</h1>
+    <p style="font-size:12.5px;color:#94a3b8;max-width:280px;line-height:1.5;margin:0 0 18px;">
+      纯单机离线运行 · 男女双性别真三维解剖 · 十四经脉与奇经八脉 · 药理护理一体化图谱
+    </p>
+    <div id="splash-status" style="font-size:12px;color:#38bdf8;margin-bottom:14px;">正在初始化离线 3D 引擎...</div>
+    <button id="btn-enter-app" class="btn glass on" style="padding:10px 26px;font-size:14px;">进入 3D 解剖大厅</button>
+  </div>
+
+  <!-- View 1: 3D Anatomy -->
+  <main id="view-3d" class="app-view active">
+    <video id="ar-video" autoplay playsinline muted style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;"></video>
+    <div id="canvas-wrap" style="position:relative;z-index:1;"></div>
+    <div class="top-stack">
+      <div class="top-row">
+        <div class="search-box glass">
+          <input id="search-input" type="text" placeholder="搜索学名 / 穴位 / 沟窝..." />
+        </div>
+        <div class="seg-gender glass">
+          <button id="btn-male" class="seg-btn active-male">男模</button>
+          <button id="btn-female" class="seg-btn">女模</button>
+        </div>
+      </div>
+      <div class="tool-strip">
+        <button id="btn-back-overview" class="btn glass on">总览</button>
+        <button id="btn-toggle-sliders" class="btn glass">剖切/透明</button>
+        <button id="btn-ghost" class="btn glass">半隐</button>
+        <button id="btn-restore-dissect" class="btn glass">恢复剥离</button>
+          <button id="btn-ar-bg" class="btn glass">AR 实景</button>
+        <button id="btn-ruler" class="btn glass">测距</button>
+        <button id="btn-pin" class="btn glass">插旗</button>
+        <button id="btn-draw" class="btn glass">画笔</button>
+        <button id="btn-phys" class="btn glass on">心肺动画</button>
+      </div>
+    </div>
+
+    <div id="left-dock" class="left-dock glass">
+      <div>冠状剖切 (Z)</div>
+      <input id="clip-z" type="range" min="-0.24" max="0.24" step="0.01" value="0.24" />
+      <div>体表透明度</div>
+      <input id="skin-alpha" type="range" min="0.05" max="1.00" step="0.05" value="0.45" />
+      <div id="drill-level" style="color:#38bdf8;font-weight:700;">一级：全身大区</div>
+    </div>
+
+    <div class="right-dock" id="layer-dock">
+      <button class="layer-btn glass on" data-layer="Skin">体表分层</button>
+      <button class="layer-btn glass on" data-layer="LigamentJoint">关节韧带</button>
+      <button class="layer-btn glass on" data-layer="Muscular">肌肉</button>
+      <button class="layer-btn glass on" data-layer="Skeleton">骨骼</button>
+      <button class="layer-btn glass on" data-layer="Visceral">脏腑</button>
+      <button class="layer-btn glass on" data-layer="Neurovascular">神经血管</button>
+      <button class="layer-btn glass on" data-layer="Points">钻取标点</button>
+    </div>
+
+    <div id="search-dropdown" class="glass" style="display:none;position:absolute;top:54px;left:10px;right:10px;max-height:220px;overflow-y:auto;border-radius:12px;padding:6px;z-index:35;"></div>
+    <div id="toast" class="toast glass">一级总览：请点击任意颜色大区或关节色块放大</div>
+  </main>
+
+  <!-- View 2: Knowledge Encyclopedia -->
+  <main id="view-kb" class="app-view">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div class="page-title" style="margin:0;">中西医知识图谱百科</div><button id="btn-kb-detail-mode" class="btn glass" style="color:#fde68a;border-color:rgba(251,191,36,0.45);">简易模式</button></div>
+    <div class="chip-row" id="kb-filters">
+      <button class="chip glass active" data-cat="all">全部知识点</button>
+      <button class="chip glass" data-cat="meridians">十二经与奇经八脉</button>
+      <button class="chip glass" data-cat="体表分层">体表皮脂筋膜</button>
+      <button class="chip glass" data-cat="骨性标志与沟窝">骨性标志与沟窝</button>
+      <button class="chip glass" data-cat="关节韧带">关节与韧带</button>
+      <button class="chip glass" data-cat="脏腑中枢">脏腑与男女生殖</button>
+      <button class="chip glass" data-cat="穴位">经络穴位</button>
+      <button class="chip glass" data-cat="muscles">肌肉起止点</button>
+      <button class="chip glass" data-cat="nursing_protocols">护理操作规范</button>
+      <button class="chip glass" data-cat="tcm_prescriptions">辨证配穴处方</button>
+      <button class="chip glass" data-cat="full_361">国标361经穴全表</button>
+      <button class="chip glass" data-cat="glossary">中西医词解大全</button>
+    </div>
+    <div class="card glass" style="margin-bottom:10px;"><div style="font-weight:700;color:#38bdf8;font-size:13px;margin-bottom:6px;">显微组织 3D 实验室 & 关节动态运动学</div><div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn glass micro-btn" data-micro="alveolus">肺泡气血屏障</button><button class="btn glass micro-btn" data-micro="nephron">肾单位</button><button class="btn glass micro-btn" data-micro="lobule">肝小叶</button><button class="btn glass micro-btn" data-micro="sarcomere">肌节收缩</button><button class="btn glass micro-btn" data-micro="synapse">神经突触</button><button class="btn glass micro-btn" data-micro="valve">心脏瓣膜</button><button class="btn glass joint-btn" data-joint="shoulder">肩关节屈伸</button><button class="btn glass joint-btn" data-joint="elbow">肘关节屈伸</button><button class="btn glass joint-btn" data-joint="wrist">腕关节屈伸</button><button class="btn glass joint-btn" data-joint="hip">髋关节屈伸</button><button class="btn glass joint-btn" data-joint="knee">膝关节屈伸</button><button class="btn glass joint-btn" data-joint="ankle">踝关节背伸</button></div></div>
+    <div id="kb-list"></div>
+  </main>
+
+  <!-- View 3: Quiz & Personal Notes -->
+  <main id="view-study" class="app-view">
+    <div class="page-title">定位自测与个人笔记中心</div>
+    <div class="card glass">
+      <div style="font-weight:700;color:var(--tcm);margin-bottom:6px;">3D 穴位与结构定位自测</div>
+      <div id="quiz-box" style="font-size:13px;line-height:1.5;color:#e2e8f0;">
+        点击下方按钮开始随机抽题，切回 3D 视图点击对应部位即可验证答案。
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+        <button id="btn-start-quiz" class="btn glass on">开始/下一题</button>
+        <span id="quiz-stat" style="font-size:12px;color:var(--muted);">得分: 0 / 0</span>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 8px;">
+      <strong style="font-size:14px;color:var(--student);">我的全部笔记与画重点</strong>
+      <button id="btn-clear-tools" class="btn glass">清除3D标记</button>
+      <button id="btn-export-notes" class="btn glass">导出笔记包</button>
+      <label class="btn glass" style="cursor:pointer;">导入笔记/课件<input id="inp-import-file" type="file" accept=".json,.txt,.md,.csv" style="display:none;"/></label>
+    </div>
+    <div id="courseware-bookmarks" style="margin-bottom:10px;"></div>
+    <div id="all-notes-list"></div>
+  </main>
+
+  <!-- View 4: Settings & App Guide -->
+  <main id="view-settings" class="app-view">
+    <div class="page-title">应用说明与系统设置</div>
+    <div class="card glass">
+      <div style="font-weight:700;color:var(--accent);margin-bottom:6px;">操作指南（三级防扎堆钻取）</div>
+      <div style="font-size:12.5px;line-height:1.65;color:#cbd5e1;">
+        1. <strong>一级总览</strong>：全身仅显示不同颜色的 6 大解剖区色块，避免密集标点遮挡。<br/>
+        2. <strong>二级聚焦</strong>：点击任一大区色块自动放大并隐藏其他区域（节省手机性能），展开该区细微体表、韧带、血管与穴位小点。<br/>
+        3. <strong>三级详情</strong>：点击小点弹出分页卡片，查看中西医解剖、药理关联、护理禁忌并记录三色重点笔记。
+      </div>
+    </div>
+    <div class="card glass">
+      <div style="font-weight:700;margin-bottom:8px;">显示与性能设置</div>
+      <label style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:8px;">
+        <span>省电模式（限制渲染像素比）</span>
+        <input id="chk-eco" type="checkbox" checked />
+      </label>
+      <div style="font-size:12px;color:var(--muted);">
+        联网扩展接口状态：<span style="color:var(--tcm);">单机离线模式（已预留后续 GitHub 同步扩展槽位）</span>
+      </div>
+    </div>
+    <div class="card glass">
+      <div style="font-weight:700;margin-bottom:4px;">关于与开源协议声明</div>
+      <div style="font-size:12px;line-height:1.6;color:var(--muted);">
+        3D 解剖底座基于开源项目 <strong>Z-Anatomy</strong>（CC BY-SA 4.0）与 <strong>BodyParts3D</strong> 构建，仅供医学与中医护理教学参考，不作为临床医疗诊断依据。
+      </div>
+    </div>
+      <div class="card glass">
+      <div style="font-weight:700;color:var(--tcm);margin-bottom:6px;">GitHub 云端扩展信息库（联网直读 + 离线缓存）</div>
+      <div style="font-size:12px;color:#cbd5e1;margin-bottom:8px;">APP 已内置核心精编库；填写你的 GitHub 仓库 <code>github_cloud_kb</code> Raw 地址后，联网即可拉取全量 361 穴详解与临床护理案例。</div>
+      <input id="inp-gh-kb-url" type="text" placeholder="https://raw.githubusercontent.com/用户名/仓库名/main/github_cloud_kb" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid rgba(148,163,184,0.3);background:rgba(15,23,42,0.7);color:#f8fafc;font-size:12px;margin-bottom:8px;" />
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button id="btn-sync-gh-kb" class="btn glass on">立即联网同步</button>
+        <span id="gh-kb-status" style="font-size:12px;color:var(--muted);">状态：已内置全量 373 穴 + 24 方剂 + 8 护理规范（100% 纯离线可用）</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Tab Bar -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-view="view-3d"><span>🧬</span><span>3D 解剖</span></button>
+    <button class="nav-item" data-view="view-kb"><span>📚</span><span>知识图谱</span></button>
+    <button class="nav-item" data-view="view-study"><span>📝</span><span>自测笔记</span></button>
+    <button class="nav-item" data-view="view-settings"><span>⚙️</span><span>设置说明</span></button>
+  </nav>
+
+  <!-- Point Details Drawer -->
+  <div id="drawer" class="drawer glass">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <span id="d-cat" style="padding:2px 8px;border-radius:999px;font-size:11px;background:rgba(245,158,11,0.2);color:var(--tcm);font-weight:700;"></span>
+        <strong id="d-name" style="font-size:16px;margin-left:4px;"></strong>
+        <div id="d-sub" style="font-size:11.5px;color:var(--muted);margin-top:2px;"></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;"><button id="btn-tts-speak" class="btn glass" style="color:#7dd3fc;">🔊 朗读</button><button id="btn-detail-mode" class="btn glass" style="color:#fde68a;border-color:rgba(251,191,36,0.45);">简易模式</button><button id="d-hide-mesh" class="btn glass" style="display:none;color:#fb7185;border-color:rgba(251,113,133,0.45);">剥离隐藏</button><button id="d-isolate-mesh" class="btn glass" style="display:none;color:#38bdf8;border-color:rgba(56,189,248,0.45);">孤立</button><button id="d-close" class="btn glass">关闭</button></div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab-ana">中西医解剖</button>
+      <button class="tab-btn" data-tab="tab-care">药理与护理</button>
+      <button class="tab-btn" data-tab="tab-note">我的笔记</button>
+    </div>
+    <div id="tab-ana" class="block"></div>
+    <div id="needle-sim-box" style="margin:6px 0;padding:8px;border-radius:8px;background:rgba(15,23,42,0.55);border:1px solid rgba(56,189,248,0.25);"><div style="display:flex;justify-content:space-between;font-size:12px;"><span>模拟进针深度（3D 实时穿层）</span><strong id="needle-depth-val" style="color:#38bdf8;">0.0 寸</strong></div><input id="needle-depth-slider" type="range" min="0" max="2.0" step="0.1" value="0" style="width:100%;margin-top:4px;"/><div id="needle-layer-msg" style="font-size:11.5px;color:#fde68a;margin-top:3px;">拖动滑块观察针尖逐层穿刺解剖位置</div></div>
+    <div id="tab-care" class="block" style="display:none;"></div>
+    <div id="tab-note" class="block" style="display:none;border-color:rgba(16,185,129,0.45);">
+      <div class="hl-row">
+        <span style="font-size:11.5px;color:var(--muted);">重点色：</span>
+        <div class="hl-dot" data-color="none" style="background:#334155;"></div>
+        <div class="hl-dot" data-color="#ef4444" style="background:#ef4444;"></div>
+        <div class="hl-dot" data-color="#f59e0b" style="background:#f59e0b;"></div>
+        <div class="hl-dot" data-color="#38bdf8" style="background:#38bdf8;"></div>
+      </div>
+      <textarea id="note-input" placeholder="记录个人记忆口诀、体表标志或课堂补充..."></textarea>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button id="btn-save-note" class="btn glass" style="border-color:var(--student);color:var(--student);">保存笔记</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.bundle.js"></script>
+</body>
+</html>
