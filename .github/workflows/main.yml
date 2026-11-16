@@ -13,7 +13,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+      - name: Normalize Uploaded File Paths
+        run: |
+          mkdir -p src www/data
+          [ -f app.js ] && mv -f app.js src/app.js || true
+          [ -f index.html ] && mv -f index.html www/index.html || true
+          [ -f anatomy_tcm_data.json ] && mv -f anatomy_tcm_data.json www/data/anatomy_tcm_data.json || true
+          [ -f tcm_medical_kb.json ] && mv -f tcm_medical_kb.json www/data/tcm_medical_kb.json || true
+          ls -la src/ www/ www/data/ scripts/
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
