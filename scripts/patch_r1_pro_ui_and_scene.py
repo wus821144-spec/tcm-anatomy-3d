@@ -66,7 +66,7 @@ if os.path.exists(idx_path):
   )
   if 'id="carbon-ink-theme"' not in h and head_end in h:
     h = h.replace(head_end, carbon_css + head_end, 1)
-  open(idx_path, 'w', encoding='utf-8').write(h)):
+  open(idx_path, 'w', encoding='utf-8').write(h)
   src = open(e3d_path, encoding='utf-8').read()
 
   old_filter = "low.includes('regions of human') || low.includes('general terms')"
