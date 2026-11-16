@@ -60,6 +60,7 @@ jobs:
       - name: Process & Split Z-Anatomy into 6 Region GLBs + TA2 Mesh Index
         run: |
           mkdir -p www/models
+          sed -i 's/export_draco_mesh_compression_enable=True/export_draco_mesh_compression_enable=False/g' scripts/split_z_anatomy_regions.py
           blender --background "$BLEND_FILE" --python-exit-code 1 --python scripts/split_z_anatomy_regions.py -- www/models
           ls -lh www/models/*.glb
 
