@@ -1,0 +1,88 @@
+name: Build Industrial 3D Anatomy APK (v7)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Blender 4.2 LTS (Headless)
+        run: |
+          curl -sL https://download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz -o blender.tar.xz
+          tar -xf blender.tar.xz
+          mv blender-4.2.3-linux-x64 /tmp/blender
+          echo "/tmp/blender" >> $GITHUB_PATH
+
+      - name: Fetch Z-Anatomy, Female Skeleton Reference & Open Acupoint Repo
+        run: |
+          git clone --depth 1 https://github.com/Z-Anatomy/Models-of-human-anatomy.git /tmp/z-anatomy
+          cd /tmp/z-anatomy
+          git lfs pull || true
+          unzip -q Z-Anatomy.zip -d /tmp/z-anatomy-extracted
+          BLEND_FILE=$(find /tmp/z-anatomy-extracted -name "*.blend" | head -n 1)
+          echo "Found BLEND_FILE: $BLEND_FILE"
+          test -n "$BLEND_FILE"
+          echo "BLEND_FILE=$BLEND_FILE" >> $GITHUB_ENV
+
+          # Optional: Fetch open-source GuanXue acupoint reference assets
+          git clone --depth 1 https://github.com/aicuc/3d-acupoint-atlas.git /tmp/guanxue || true
+          mkdir -p www/data/ext_acupoints
+          if [ -d "/tmp/guanxue" ]; then
+            find /tmp/guanxue -maxdepth 3 -name "*.json" -exec cp {} www/data/ext_acupoints/ \; || true
+          fi
+
+      - name: Process & Split Z-Anatomy into 6 Region GLBs + TA2 Mesh Index
+        run: |
+          mkdir -p www/models
+          blender --background "$BLEND_FILE" --python-exit-code 1 --python scripts/split_z_anatomy_regions.py -- www/models
+          ls -lh www/models/*.glb
+
+      - name: Bundle Offline Web Assets & Draco Decoder
+        run: |
+          npm install
+          npm run bundle
+          npm run copy-draco
+
+      - name: Initialize & Sync Capacitor Android
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+
+      - name: Build Standalone Debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          APK_SIZE=$(stat -c%s app/build/outputs/apk/debug/app-debug.apk)
+          echo "Built APK size: $APK_SIZE bytes"
+          if [ "$APK_SIZE" -lt 5000000 ]; then
+            echo "ERROR: APK size too small ($APK_SIZE bytes), 3D models may be missing!"
+            exit 1
+          fi
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tcm-anatomy-industrial-v7-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
