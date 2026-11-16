@@ -104,8 +104,19 @@ jobs:
           curl -sL --retry 3 --fail -o www/models/hra_kidney.glb "https://cdn.humanatlas.io/digital-objects/ref-organ/kidney-female-left/v1.3/assets/3d-vh-f-kidney-l.glb" || true
           curl -sL --retry 3 --fail -o www/models/hra_liver.glb "https://cdn.humanatlas.io/digital-objects/ref-organ/liver-female/v1.2/assets/3d-vh-f-liver.glb" || true
           curl -sL --retry 3 --fail -o www/models/hra_uterus.glb "https://cdn.humanatlas.io/digital-objects/ref-organ/uterus-female/v1.2/assets/3d-vh-f-uterus.glb" || true
+          curl -sL --retry 3 --fail -o www/models/hra_lung.glb "https://cdn.humanatlas.io/digital-objects/ref-organ/lung-female/v1.4/assets/3d-vh-f-lung.glb" || true
+          curl -sL --retry 3 --fail -o www/models/hra_pancreas.glb "https://cdn.humanatlas.io/digital-objects/ref-organ/pancreas-female/v1.3/assets/3d-vh-f-pancreas.glb" || true
+          curl -sL --retry 3 --fail -o www/models/hra_spleen.glb "https://cdn.humanatlas.io/digital-objects/ref-organ/spleen-female/v1.3/assets/3d-vh-f-spleen.glb" || true
+          curl -sL --retry 3 --fail -o www/models/hra_large_intestine.glb "https://cdn.humanatlas.io/digital-objects/ref-organ/large-intestine-female/v1.3/assets/3d-sbu-f-large-intestine.glb" || true
+          curl -sL --retry 3 --fail -o www/models/hra_small_intestine.glb "https://cdn.humanatlas.io/digital-objects/ref-organ/small-intestine-female/v1.2/assets/3d-vh-f-small-intestine.glb" || true
+          curl -sL --retry 3 --fail -o www/models/hra_eye.glb "https://cdn.humanatlas.io/digital-objects/ref-organ/eye-female-left/v1.3/assets/3d-vh-f-eye-l.glb" || true
+          curl -sL --retry 3 --fail -o www/models/hra_prostate.glb "https://cdn.humanatlas.io/digital-objects/ref-organ/prostate-male/v1.2/assets/3d-vh-m-prostate.glb" || true
+          curl -sL --retry 3 --fail -o www/models/hra_kidney_r.glb "https://cdn.humanatlas.io/digital-objects/ref-organ/kidney-male-right/v1.3/assets/3d-vh-m-kidney-r.glb" || true
           find www/models -name "hra_*.glb" -size -10k -delete
           python3 scripts/patch_run24.py
+          git checkout -- src/micro_anatomy_engine.js src/tcm_meridian_engine.js
+          python3 scripts/enrich_tcm_tier1.py
+          python3 scripts/patch_tier23_light.py
           ls -lh www/models/hra_*.glb || true
           
   
