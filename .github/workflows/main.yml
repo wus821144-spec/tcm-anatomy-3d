@@ -122,6 +122,7 @@ jobs:
           blender -b -P scripts/build_micro_glbs.py
           python3 scripts/enrich_tcm_max.py
           python3 scripts/patch_max_standard.py
+          python3 scripts/patch_r1_release.py
           npm run bundle
           ls -lh www/models/hra_*.glb || true
           
