@@ -125,6 +125,7 @@ jobs:
           python3 scripts/patch_r1_release.py
           python3 scripts/patch_acupoints_pro.py
           python3 scripts/patch_r1_pro_final.py
+          python3 scripts/patch_r1_pro_ui_and_scene.py
           npm run bundle
           ls -lh www/models/hra_*.glb || true
           
