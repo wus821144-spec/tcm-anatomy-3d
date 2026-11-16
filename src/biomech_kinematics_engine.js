@@ -12,13 +12,17 @@ const MUSCLE_VECTORS = {
 };
 
 const JOINT_PIVOTS = {
-  shoulder: { pos: [0.20, 1.36, 0.0], axis: 'z', maxY: 1.38, minX: 0.17, len: 0.28, label: '肩关节外展（真实3D上肢骨骼联动，主动肌：三角肌）' },
-  elbow: { pos: [0.24, 1.10, 0.0], axis: 'x', maxY: 1.12, minX: 0.20, len: 0.24, label: '肘关节屈伸（真实3D前臂联动，主动肌：肱二头肌）' },
-  wrist: { pos: [0.28, 0.88, 0.0], axis: 'x', maxY: 0.90, minX: 0.23, len: 0.12, label: '腕关节掌屈背伸（真实3D手掌联动）' },
-  hip: { pos: [0.10, 0.88, 0.0], axis: 'x', maxY: 0.90, minX: 0.03, len: 0.38, label: '髋关节前屈（真实3D下肢联动，主动肌：髂腰肌）' },
-  knee: { pos: [0.10, 0.49, 0.01], axis: 'x', maxY: 0.51, minX: 0.03, len: 0.36, label: '膝关节屈伸（真实3D小腿联动，主动肌：股四头肌）' },
-  ankle: { pos: [0.10, 0.09, 0.0], axis: 'x', maxY: 0.10, minX: 0.03, len: 0.14, label: '踝关节背伸跖屈（真实3D足部联动，主动肌：胫骨前肌）' }
+  shoulder: { pos: [0.20, 1.36, 0.0], axis: 'z', maxY: 1.38, minX: 0.17, limbType: 'arm', len: 0.28, label: '肩关节外展（真实3D上肢骨骼联动，主动肌：三角肌）' },
+  elbow: { pos: [0.24, 1.10, 0.0], axis: 'x', maxY: 1.12, minX: 0.21, limbType: 'arm', len: 0.24, label: '肘关节屈伸（真实3D前臂联动，主动肌：肱二头肌）' },
+  wrist: { pos: [0.28, 0.88, 0.0], axis: 'x', maxY: 0.90, minX: 0.24, limbType: 'arm', len: 0.12, label: '腕关节掌屈背伸（真实3D手掌联动）' },
+  hip: { pos: [0.10, 0.88, 0.0], axis: 'x', maxY: 0.90, minX: 0.03, limbType: 'leg', len: 0.38, label: '髋关节前屈（真实3D下肢联动，主动肌：髂腰肌）' },
+  knee: { pos: [0.10, 0.49, 0.01], axis: 'x', maxY: 0.51, minX: 0.03, limbType: 'leg', len: 0.36, label: '膝关节屈伸（真实3D小腿联动，主动肌：股四头肌）' },
+  ankle: { pos: [0.10, 0.09, 0.0], axis: 'x', maxY: 0.10, minX: 0.03, limbType: 'leg', len: 0.14, label: '踝关节背伸跖屈（真实3D足部联动，主动肌：胫骨前肌）' }
 };
+
+const TRUNK_EXCLUDE_RE = /rib|sternum|clavicle|scapula|pectoral|vertebra|sacrum|ilium|ischium|pubis|pelvi|thorax|abdom|heart|lung|liver|stomach|kidney|spleen|intestin/i;
+const ARM_INCLUDE_RE = /humerus|radius|ulna|carpal|metacarpal|phalan|biceps|triceps|brachi|pronator|supinator|flexor_carpi|extensor_carpi|deltoid|hand|wrist|forearm/i;
+const LEG_INCLUDE_RE = /femur|tibia|fibula|patella|tarsal|metatarsal|calcaneus|talus|quadriceps|rectus_femoris|vastus|biceps_femoris|semitend|semimemb|gastrocnem|soleus|tibialis|fibularis|perone|sartorius|gracilis|foot|ankle|phalan/i;
 
 export function createBiomechEngine(scene) {
   const vecGroup = new THREE.Group();
@@ -78,14 +82,20 @@ export function createBiomechEngine(scene) {
     pivot.add(new THREE.Mesh(new THREE.SphereGeometry(0.022, 16, 16), new THREE.MeshBasicMaterial({ color: 0xfbbf24 })));
 
     if (anatomyGroup) {
+      anatomyGroup.updateMatrixWorld(true);
       const box = new THREE.Box3();
       const center = new THREE.Vector3();
       const toAttach = [];
+      const incRe = j.limbType === 'arm' ? ARM_INCLUDE_RE : LEG_INCLUDE_RE;
       anatomyGroup.traverse((c) => {
         if (!c.isMesh || !c.visible) return;
+        const nm = c.name || '';
+        if (TRUNK_EXCLUDE_RE.test(nm)) return;
         box.setFromObject(c);
         box.getCenter(center);
-        if (center.y < j.maxY && center.x >= j.minX && center.x < 0.45) toAttach.push(c);
+        if (center.y < j.maxY && center.x >= j.minX && center.x < 0.45 && (incRe.test(nm) || (j.limbType === 'arm' && center.x >= 0.22) || (j.limbType === 'leg' && center.y < 0.85))) {
+          toAttach.push(c);
+        }
       });
       toAttach.forEach((m) => {
         attachedRecords.push({ mesh: m, parent: m.parent, pos: m.position.clone(), quat: m.quaternion.clone() });
