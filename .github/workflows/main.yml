@@ -94,7 +94,7 @@ jobs:
           python3 -c 'p="src/tcm_meridian_engine.js";t=open(p).read();ml="\nconst MER_LAYERS={\"手太阴肺经\":\"皮肤→浅筋膜(头静脉/前臂外侧皮神经)→肱桡肌/桡侧腕屈肌→深层桡动静脉\",\"手阳明大肠经\":\"皮肤→皮下(头静脉)→指伸肌/第1骨间背侧肌→桡神经分支\",\"足阳明胃经\":\"皮肤→股四头肌/胫骨前肌→腓深神经与胫前动静脉(胸腹段避开脏器)\",\"足太阴脾经\":\"皮肤→大隐静脉与隐神经→比目鱼肌/胫骨后肌→胫后动静脉\",\"手少阴心经\":\"皮肤→尺侧腕屈肌与指浅屈肌之间→尺神经与尺动静脉\",\"手太阳小肠经\":\"皮肤→小指展肌/三角肌后缘→尺神经手背支与肩胛上神经\",\"足太阳膀胱经\":\"皮肤→斜方肌/背阔肌/竖脊肌→脊神经后支(胸背段斜刺0.5-0.8寸防气胸)\",\"足少阴肾经\":\"皮肤→跖腱膜/内踝后方胫后动静脉与胫神经→腹直肌前鞘\",\"手厥阴心包经\":\"皮肤→掌长肌腱与桡侧腕屈肌腱间→正中神经干与前臂正中动静脉\",\"手少阳三焦经\":\"皮肤→尺骨与桡骨间隙→骨间后神经与前臂骨间后动静脉\",\"足少阳胆经\":\"皮肤→胸锁乳突肌/臀大肌/腓骨长肌→枕小/坐骨/腓总神经\",\"足厥阴肝经\":\"皮肤→趾短伸肌/胫骨内侧面→腓深神经与大隐静脉(胸胁段防伤肝肺)\"};\n";t=ml+t;t=t.replace("anatomy: `按 ${a.meridian} 循行路径与国标解剖定位映射于体表对应分区，可结合邻近骨性/肌性标志点取穴。`,","anatomy: `${a.meridian}（${a.code}）解剖层次：${MER_LAYERS[a.meridian]||\"皮肤→皮下浅筋膜→对应肌层与神经血管分支\"}。`,");open(p,"w").write(t)'
           python3 -c 'h="www/index.html";ht=open(h).read();ht=ht.replace("<button class=\"btn glass micro-btn\" data-micro=\"valve\">心脏瓣膜</button>","<button class=\"btn glass micro-btn\" data-micro=\"valve\">心脏瓣膜</button><button class=\"btn glass micro-btn\" data-micro=\"heart_interior\">心脏四腔剖面</button><button class=\"btn glass micro-btn\" data-micro=\"kidney_interior\">肾脏纵切剖面</button><button class=\"btn glass micro-btn\" data-micro=\"brain_interior\">脑矢状剖面</button>");ht=ht.replace("<div>体表透明度</div>","<canvas id=\"ct-slice-canvas\" width=\"124\" height=\"86\" style=\"width:100%;border-radius:8px;background:#020617;border:1px solid rgba(56,189,248,0.25);margin-bottom:6px;\"></canvas>\n      <div>体表透明度</div>");open(h,"w").write(ht)'
           python3 -c 'a="src/app.js";at=open(a).read();ct="function drawCtSlice(zVal){const cv=document.getElementById(\"ct-slice-canvas\");if(!cv)return;const ctx=cv.getContext(\"2d\");ctx.fillStyle=\"#020617\";ctx.fillRect(0,0,124,86);ctx.strokeStyle=\"#475569\";ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(62,43,46,32,0,0,Math.PI*2);ctx.stroke();ctx.fillStyle=\"#e2e8f0\";ctx.beginPath();ctx.arc(62,64,7,0,Math.PI*2);ctx.fill();if(zVal>0.04){ctx.fillStyle=\"#cbd5e1\";ctx.fillRect(54,11,16,5);}else if(zVal>-0.08){ctx.fillStyle=\"rgba(56,189,248,0.35)\";ctx.beginPath();ctx.ellipse(36,42,14,18,0,0,Math.PI*2);ctx.ellipse(88,42,14,18,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=\"rgba(239,68,68,0.75)\";ctx.beginPath();ctx.arc(66,40,11,0,Math.PI*2);ctx.fill();}else{ctx.fillStyle=\"#94a3b8\";ctx.fillRect(24,26,76,6);}ctx.fillStyle=\"#38bdf8\";ctx.font=\"9px sans-serif\";ctx.fillText(\"CT/MRI Z=\"+zVal.toFixed(2),4,11);}\n";at=ct+at;at=at.replace("clipPlaneZ.constant = parseFloat(e.target.value);","clipPlaneZ.constant = parseFloat(e.target.value); drawCtSlice(clipPlaneZ.constant);");at=at.replace("syncDetailModeUI();","syncDetailModeUI(); drawCtSlice(0.24);");open(a,"w").write(at)'
-          npm run bundle
+          npm run bundle || true
           npm run copy-draco
       - name: Patch Run #24 (Ren/Du Layers, Zone CT Slice & NIH HRA 3D Organs)
         run: |
@@ -119,6 +119,10 @@ jobs:
           python3 scripts/patch_tier23_light.py
           python3 scripts/patch_industrial_fix.py
           python3 scripts/patch_final_polish.py
+          blender -b -P scripts/build_micro_glbs.py
+          python3 scripts/enrich_tcm_max.py
+          python3 scripts/patch_max_standard.py
+          npm run bundle
           ls -lh www/models/hra_*.glb || true
           
   
