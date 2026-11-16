@@ -97,3 +97,39 @@ if os.path.exists('capacitor.config.json'):
   cap = json.load(open('capacitor.config.json', encoding='utf-8'))
   cap['appName'] = '中医解剖3D特供版 R1-Pro'
   open('capacitor.config.json', 'w', encoding='utf-8').write(json.dumps(cap, ensure_ascii=False, indent=2))
+mer_path = 'src/tcm_meridian_engine.js'
+if os.path.exists(mer_path):
+  ms = open(mer_path, encoding='utf-8').read()
+  if 'export function snapAcupointsToBodySurface' not in ms:
+    ms += '''
+export function snapAcupointsToBodySurface(points, anatomyGroup, pointMeshes) {
+  if (!anatomyGroup || (!points && !pointMeshes)) return 0;
+  const targets = [];
+  anatomyGroup.traverse((c) => { if (c.isMesh && c.visible) targets.push(c); });
+  if (!targets.length) return 0;
+  const ray = new THREE.Raycaster();
+  const origin = new THREE.Vector3();
+  const dir = new THREE.Vector3();
+  let snapped = 0;
+  const list = pointMeshes && pointMeshes.length ? pointMeshes : [];
+  list.forEach((m) => {
+    const pt = m.userData && m.userData.data;
+    if (!pt || pt.category === '骨性标志与沟窝' || pt.category === '脏腑中枢') return;
+    const p = m.position;
+    const ax = Math.abs(p.x) > 0.19 && p.y < 1.38 ? p.x * 0.92 : (Math.abs(p.x) > 0.06 && p.y < 0.85 ? p.x * 0.85 : 0);
+    dir.set(ax - p.x, 0, -p.z);
+    if (dir.lengthSq() < 1e-6) dir.set(0, 0, -1);
+    dir.normalize();
+    origin.copy(p).addScaledVector(dir, -0.14);
+    ray.set(origin, dir); ray.near = 0.01; ray.far = 0.28;
+    const hits = ray.intersectObjects(targets, false);
+    if (hits.length > 0) {
+      m.position.copy(hits[0].point).addScaledVector(dir, -0.0045);
+      pt.pos = [+m.position.x.toFixed(3), +m.position.y.toFixed(3), +m.position.z.toFixed(3)];
+      snapped++;
+    }
+  });
+  return snapped;
+}
+'''
+    open(mer_path, 'w', encoding='utf-8').write(ms)
