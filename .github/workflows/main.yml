@@ -146,6 +146,7 @@ jobs:
           python3 scripts/patch_r1_pro_final.py
           python3 scripts/patch_r1_pro_ui_and_scene.py
           python3 scripts/patch_r1_pro_essence_fusion.py
+          python3 scripts/patch_r1_pro_carbon_ui.py
           npm run bundle
           ls -lh www/models/*.glb || true
 
