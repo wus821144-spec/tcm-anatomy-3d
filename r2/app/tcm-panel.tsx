@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Clock, Compass, Eye, Search, X } from 'lucide-react';
+import { BookOpen, Clock, Compass, Eye, Layers, Search, X } from 'lucide-react';
 import { applyCarbonAccent, CARBON_ACCENTS, loadSavedCarbonAccent, r2Plugins, type CarbonAccent } from './plugin-registry';
 
 r2Plugins.register({ id: 'tcm-ziwu-clock', name: '子午流注经络时钟', version: '1.0.1', category: 'tcm' });
 r2Plugins.register({ id: 'tcm-361-acupoints', name: '国标361经穴与方剂护理', version: '1.0.1', category: 'tcm' });
-r2Plugins.register({ id: 'tcm-3d-meridians', name: '3D体表穴位与经络循行图层', version: '1.0.1', category: 'tcm' });
+r2Plugins.register({ id: 'tcm-3d-meridians', name: '3D体表吸附穴位与经络图层', version: '1.0.1', category: 'tcm' });
 r2Plugins.register({ id: 'bilingual-bp3d', name: 'BodyParts3D 中英双语词典', version: '1.0.1', category: 'anatomy' });
 r2Plugins.register({ id: 'carbon-theme-switcher', name: '碳墨黑多辅色引擎', version: '1.0.1', category: 'theme' });
 
@@ -30,6 +30,9 @@ interface AcupointDetail {
 interface MeridianItem {
   name: string;
   code?: string;
+  category?: string;
+  pathway?: string;
+  indications?: string;
 }
 
 interface PrescriptionItem {
@@ -47,6 +50,13 @@ interface NursingItem {
   detailed?: string;
 }
 
+interface GlossaryItem {
+  term?: string;
+  name?: string;
+  desc?: string;
+  definition?: string;
+}
+
 interface TcmBundle {
   meridians: MeridianItem[];
   points?: Point3D[];
@@ -54,7 +64,8 @@ interface TcmBundle {
   acupoint_details: Record<string, AcupointDetail>;
   tcm_prescriptions: PrescriptionItem[];
   nursing_protocols: NursingItem[];
-  nursing_details: NursingItem[];
+  nursing_details: NursingItem[]
+  glossary?: GlossaryItem[];;
 }
 
 const ZIWU_TABLE = [
@@ -84,11 +95,10 @@ export function TcmOverlay({
   showPoints3D = true,
   onTogglePoints3D,
   onPointsLoaded,
-  activeMeridian3D = '全部',
   onSelectMeridian3D
 }: TcmOverlayProps) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<'ziwu' | 'points' | 'rx'>('ziwu');
+  const [tab, setTab] = useState<'ziwu' | 'points' | 'meridians' | 'rx'>('ziwu');
   const [accent, setAccent] = useState<CarbonAccent>(() => loadSavedCarbonAccent());
   const [bundle, setBundle] = useState<TcmBundle | null>(null);
   const [query, setQuery] = useState('');
@@ -141,8 +151,8 @@ export function TcmOverlay({
   return (
     <>
       <button type="button" className="tcm-fab glass" onClick={() => setOpen((v) => !v)} aria-label="打开中医经络与子午流注">
-        <Compass size={16} />
-        <span>中医经络 · {currentZiwu.shichen.split(' ')[0]}</span>
+        <Compass size={15} />
+        <span>中医 · {currentZiwu.shichen.split(' ')[0]}</span>
       </button>
 
       {open && (
@@ -150,7 +160,7 @@ export function TcmOverlay({
           <aside className="tcm-sheet glass" onClick={(e) => e.stopPropagation()}>
             <div className="tcm-sheet-head">
               <div>
-                <div className="tcm-eyebrow">Anatomy R1-1.0.1 · 已载入 {r2Plugins.list().length} 项插件</div>
+                <div className="tcm-eyebrow">Anatomy R1-1.0.1 · 已载入 {r2Plugins.list().length} 项模块</div>
                 <h2>中医经络 · 361经穴与临床百科</h2>
               </div>
               <button type="button" className="tcm-close" onClick={() => setOpen(false)} aria-label="关闭">
@@ -174,13 +184,16 @@ export function TcmOverlay({
 
             <div className="tcm-tabs">
               <button type="button" className={tab === 'ziwu' ? 'active' : ''} onClick={() => setTab('ziwu')}>
-                <Clock size={14} /> 子午流注
+                <Clock size={13} /> 子午流注
               </button>
               <button type="button" className={tab === 'points' ? 'active' : ''} onClick={() => setTab('points')}>
-                <Compass size={14} /> 经络穴位
+                <Compass size={13} /> 经穴361
+              </button>
+              <button type="button" className={tab === 'meridians' ? 'active' : ''} onClick={() => setTab('meridians')}>
+                <Layers size={13} /> 经脉名解
               </button>
               <button type="button" className={tab === 'rx' ? 'active' : ''} onClick={() => setTab('rx')}>
-                <BookOpen size={14} /> 方剂护理
+                <BookOpen size={13} /> 方剂护理
               </button>
             </div>
 
@@ -240,6 +253,29 @@ export function TcmOverlay({
                       );
                     })}
                   </div>
+                </div>
+              )}
+              {tab === 'meridians' && (
+                <div className="tcm-stack">
+                  <h4 className="tcm-sec-title">二十脉循行与主治 ({bundle?.meridians.length ?? 0})</h4>
+                  {(bundle?.meridians ?? []).map((m, i) => (
+                    <div key={i} className="tcm-item-card static">
+                      <strong>{m.name} {m.code ? `(${m.code})` : ''}</strong>
+                      {m.pathway && <p><b>循行：</b>{m.pathway}</p>}
+                      {m.indications && <p><b>主治：</b>{m.indications}</p>}
+                    </div>
+                  ))}
+                  {!!(bundle?.glossary && bundle.glossary.length) && (
+                    <>
+                      <h4 className="tcm-sec-title">中医经络术语名解 ({bundle.glossary.length})</h4>
+                      {bundle.glossary.map((g, i) => (
+                        <div key={i} className="tcm-item-card static">
+                          <strong>{g.term || g.name || `术语 ${i + 1}`}</strong>
+                          {(g.desc || g.definition) && <p>{g.desc || g.definition}</p>}
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
 
