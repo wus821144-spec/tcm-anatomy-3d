@@ -99,7 +99,7 @@ input, textarea { -webkit-user-select: text !important; user-select: text !impor
 .loading-track { background: rgba(255, 255, 255, 0.1) !important; }
 .loading-track i { background: var(--accent-hex) !important; }
 .tcm-fab {
-  position: fixed; right: max(14px, env(safe-area-inset-right)); top: max(72px, calc(env(safe-area-inset-top) + 56px));
+  position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: calc(158px + env(safe-area-inset-bottom)); top: auto; right: auto;
   z-index: 32; display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 999px;
   font-size: 12px; font-weight: 600; color: var(--accent-text) !important; border-color: var(--accent-border) !important;
   box-shadow: 0 0 18px var(--accent-soft) !important;
@@ -114,7 +114,7 @@ input, textarea { -webkit-user-select: text !important; user-select: text !impor
 .tcm-theme-pill { padding: 4px 10px; border-radius: 999px; font-size: 11px; border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; display: inline-flex; align-items: center; gap: 5px; }
 .tcm-theme-pill.active { border-color: var(--accent-hex); color: var(--accent-text); background: var(--accent-soft); }
 .tcm-theme-dot { width: 8px; height: 8px; border-radius: 50%; }
-.tcm-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: rgba(15, 20, 30, 0.8); padding: 4px; border-radius: 12px; }
+.tcm-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; background: rgba(15, 20, 30, 0.8); padding: 4px; border-radius: 12px; }
 .tcm-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; border-radius: 9px; font-size: 12px; font-weight: 600; color: #8b9bb4; }
 .tcm-tabs button.active { background: var(--accent-hex); color: #05070b; }
 .tcm-body { overflow-y: auto; flex: 1; min-height: 0; }
