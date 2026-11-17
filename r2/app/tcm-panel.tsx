@@ -1,23 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Clock, Compass, Search, X } from 'lucide-react';
+import { BookOpen, Clock, Compass, Eye, Search, X } from 'lucide-react';
 import { applyCarbonAccent, CARBON_ACCENTS, loadSavedCarbonAccent, r2Plugins, type CarbonAccent } from './plugin-registry';
 
-r2Plugins.register({ id: 'tcm-ziwu-clock', name: '子午流注经络时钟', version: '2.0', category: 'tcm' });
-r2Plugins.register({ id: 'tcm-361-acupoints', name: '国标361经穴与方剂护理', version: '2.0', category: 'tcm' });
-r2Plugins.register({ id: 'carbon-theme-switcher', name: '碳墨黑多辅色引擎', version: '2.0', category: 'theme' });
+r2Plugins.register({ id: 'tcm-ziwu-clock', name: '子午流注经络时钟', version: '1.0.1', category: 'tcm' });
+r2Plugins.register({ id: 'tcm-361-acupoints', name: '国标361经穴与方剂护理', version: '1.0.1', category: 'tcm' });
+r2Plugins.register({ id: 'tcm-3d-meridians', name: '3D体表穴位与经络循行图层', version: '1.0.1', category: 'tcm' });
+r2Plugins.register({ id: 'bilingual-bp3d', name: 'BodyParts3D 中英双语词典', version: '1.0.1', category: 'anatomy' });
+r2Plugins.register({ id: 'carbon-theme-switcher', name: '碳墨黑多辅色引擎', version: '1.0.1', category: 'theme' });
+
+export interface Point3D {
+  name: string;
+  code?: string;
+  meridian: string;
+  pos: [number, number, number];
+}
 
 interface AcupointItem {
   code?: string;
   name: string;
   meridian?: string;
-  zone?: string;
   ontology?: string;
 }
 
 interface AcupointDetail {
-  code?: string;
-  meridian?: string;
-  type?: string;
   simple?: string;
   detailed?: string;
 }
@@ -39,12 +44,12 @@ interface NursingItem {
   indications?: string;
   params?: string;
   cautions?: string;
-  simple?: string;
   detailed?: string;
 }
 
 interface TcmBundle {
   meridians: MeridianItem[];
+  points?: Point3D[];
   full_acupoints_catalog: AcupointItem[];
   acupoint_details: Record<string, AcupointDetail>;
   tcm_prescriptions: PrescriptionItem[];
@@ -67,7 +72,21 @@ const ZIWU_TABLE = [
   { hours: [21, 22], shichen: '亥时 (21:00-23:00)', meridian: '手少阳三焦经', point: '外关 / 支沟', verse: '胁肋寻支沟，亥时三焦宁，百脉休养迎子时。' }
 ];
 
-export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: string) => void }) {
+interface TcmOverlayProps {
+  showPoints3D?: boolean;
+  onTogglePoints3D?: (next: boolean) => void;
+  onPointsLoaded?: (pts: Point3D[]) => void;
+  activeMeridian3D?: string;
+  onSelectMeridian3D?: (meridian: string) => void;
+}
+
+export function TcmOverlay({
+  showPoints3D = true,
+  onTogglePoints3D,
+  onPointsLoaded,
+  activeMeridian3D = '全部',
+  onSelectMeridian3D
+}: TcmOverlayProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'ziwu' | 'points' | 'rx'>('ziwu');
   const [accent, setAccent] = useState<CarbonAccent>(() => loadSavedCarbonAccent());
@@ -81,7 +100,13 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
   useEffect(() => {
     fetch('/data/tcm_bundle.json')
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d) setBundle(d as TcmBundle); })
+      .then((d) => {
+        if (d) {
+          const tb = d as TcmBundle;
+          setBundle(tb);
+          if (tb.points && onPointsLoaded) onPointsLoaded(tb.points);
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -108,6 +133,11 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
       .slice(0, 80);
   }, [bundle, query, meridianFilter]);
 
+  const selectMeridian = (m: string) => {
+    setMeridianFilter(m);
+    if (onSelectMeridian3D) onSelectMeridian3D(m);
+  };
+
   return (
     <>
       <button type="button" className="tcm-fab glass" onClick={() => setOpen((v) => !v)} aria-label="打开中医经络与子午流注">
@@ -120,7 +150,7 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
           <aside className="tcm-sheet glass" onClick={(e) => e.stopPropagation()}>
             <div className="tcm-sheet-head">
               <div>
-                <div className="tcm-eyebrow">插件引擎已载入 {r2Plugins.list().length} 项 · 碳墨黑离线图谱</div>
+                <div className="tcm-eyebrow">Anatomy R1-1.0.1 · 已载入 {r2Plugins.list().length} 项插件</div>
                 <h2>中医经络 · 361经穴与临床百科</h2>
               </div>
               <button type="button" className="tcm-close" onClick={() => setOpen(false)} aria-label="关闭">
@@ -128,13 +158,18 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
               </button>
             </div>
 
-            <div className="tcm-theme-row" aria-label="碳墨黑辅色切换">
+            <div className="tcm-theme-row" aria-label="碳墨黑辅色与3D穴位开关">
               {CARBON_ACCENTS.map((a) => (
                 <button key={a.id} type="button" className={`tcm-theme-pill ${accent === a.id ? 'active' : ''}`} onClick={() => setAccent(a.id)}>
                   <span className="tcm-theme-dot" style={{ background: a.hex }} />
                   {a.label}
                 </button>
               ))}
+              {onTogglePoints3D && (
+                <button type="button" className={`tcm-theme-pill ${showPoints3D ? 'active' : ''}`} onClick={() => onTogglePoints3D(!showPoints3D)}>
+                  <Eye size={12} /> 3D穴位{showPoints3D ? '开' : '关'}
+                </button>
+              )}
             </div>
 
             <div className="tcm-tabs">
@@ -157,15 +192,13 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
                     <h3>{currentZiwu.meridian}</h3>
                     <p className="tcm-meta">当令要穴：<strong>{currentZiwu.point}</strong></p>
                     <p className="tcm-verse">{currentZiwu.verse}</p>
-                    {onSelectAnatomy && (
-                      <button type="button" className="tcm-action-btn" onClick={() => { setTab('points'); setMeridianFilter(currentZiwu.meridian); }}>
-                        查看该经络全部穴位
-                      </button>
-                    )}
+                    <button type="button" className="tcm-action-btn" onClick={() => { selectMeridian(currentZiwu.meridian); setTab('points'); }}>
+                      在 3D 人体与列表高亮该经络
+                    </button>
                   </div>
                   <div className="tcm-grid">
                     {ZIWU_TABLE.map((z) => (
-                      <button type="button" key={z.shichen} className={`tcm-mini-card ${z.shichen === currentZiwu.shichen ? 'now' : ''}`} onClick={() => { setMeridianFilter(z.meridian); setTab('points'); }}>
+                      <button type="button" key={z.shichen} className={`tcm-mini-card ${z.shichen === currentZiwu.shichen ? 'now' : ''}`} onClick={() => { selectMeridian(z.meridian); setTab('points'); }}>
                         <strong>{z.shichen.split(' ')[0]} · {z.meridian}</strong>
                         <span>{z.point}</span>
                       </button>
@@ -181,9 +214,9 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
                     <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索穴位名称、编码(LU1)、经络或主治..." />
                   </div>
                   <div className="tcm-chip-row">
-                    <button type="button" className={meridianFilter === '全部' ? 'active' : ''} onClick={() => setMeridianFilter('全部')}>全部</button>
+                    <button type="button" className={meridianFilter === '全部' ? 'active' : ''} onClick={() => selectMeridian('全部')}>全部</button>
                     {(bundle?.meridians ?? []).map((m) => (
-                      <button type="button" key={m.name} className={meridianFilter === m.name ? 'active' : ''} onClick={() => setMeridianFilter(m.name)}>{m.name}</button>
+                      <button type="button" key={m.name} className={meridianFilter === m.name ? 'active' : ''} onClick={() => selectMeridian(m.name)}>{m.name}</button>
                     ))}
                   </div>
                   <div className="tcm-list">
