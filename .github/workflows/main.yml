@@ -153,8 +153,7 @@ jobs:
           s = open(px, "r", encoding="utf-8").read()
           s = "import { TcmOverlay, type Point3D } from '\''./tcm-panel'\'';\nimport { loadBilingualDict, formatBilingualName, matchesBilingualQuery, type BilingualMap } from '\''./bilingual-dict'\'';\n" + s
           s = s.replace("const initial:SceneState={explode:0,visible:DEFAULT_VISIBLE,selected:[],isolate:false,view:'\''three-quarter'\'',rotate:false,reset:0};", "const initial:SceneState={explode:0,visible:DEFAULT_VISIBLE,selected:[],isolate:false,view:'\''three-quarter'\'',rotate:false,reset:0,points3D:[],showPoints3D:true,activeMeridian:'\''全部'\''};")
-          s = s.replace("export default function Home(){", "export default function Home(){
-  const [zhDict,setZhDict]=useState<BilingualMap>({});useEffect(()=>{loadBilingualDict().then(setZhDict);},[]);")
+          s = s.replace("export default function Home(){", "export default function Home(){" + chr(10) + "  const [zhDict,setZhDict]=useState<BilingualMap>({});useEffect(()=>{loadBilingualDict().then(setZhDict);},[]);")
           s = s.replace("c.name.toLowerCase().includes(term)||c.id.toLowerCase().includes(term)", "matchesBilingualQuery(c.name,term,zhDict)||c.id.toLowerCase().includes(term)")
           s = s.replace("<h1>Human Atlas", "<h1>Anatomy R1-1.0.1")
           s = s.replace("{chosen?.name}", "{chosen?formatBilingualName(chosen.name,zhDict):'\'''\''}")
