@@ -16,7 +16,7 @@ export interface Point3D {
   name: string;
   code?: string;
   meridian: string;
-  pos: [number, number, number];
+  pos: [number, number, number]; zone?: string;
 }
 
 interface AcupointItem {
@@ -36,7 +36,7 @@ interface MeridianItem {
   code?: string;
   category?: string;
   pathway?: string;
-  indications?: string;
+  indications?: string; id?: string; flow?: string;
 }
 
 interface PrescriptionItem {
@@ -58,7 +58,7 @@ interface GlossaryItem {
   term?: string;
   name?: string;
   desc?: string;
-  definition?: string;
+  definition?: string; def?: string;
 }
 
 interface TcmBundle {
@@ -92,14 +92,14 @@ interface TcmOverlayProps {
   onTogglePoints3D?: (next: boolean) => void;
   onPointsLoaded?: (pts: Point3D[]) => void;
   activeMeridian3D?: string;
-  onSelectMeridian3D?: (meridian: string) => void;
+  onSelectMeridian3D?: (meridian: string) => void; onFocusPoint3D?: (pt: Point3D) => void;
 }
 
 export function TcmOverlay({
   showPoints3D = true,
   onTogglePoints3D,
   onPointsLoaded,
-  onSelectMeridian3D
+  onSelectMeridian3D, onFocusPoint3D
 }: TcmOverlayProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'ziwu' | 'points' | 'meridians' | 'rx' | 'micro' | 'notes'>('ziwu');
@@ -143,8 +143,8 @@ export function TcmOverlay({
           (p.meridian || '').toLowerCase().includes(q) ||
           (det?.detailed || '').toLowerCase().includes(q)
         );
-      })
-      .slice(0, 80);
+      });
+      
   }, [bundle, query, meridianFilter]);
 
   const selectMeridian = (m: string) => {
@@ -256,7 +256,7 @@ export function TcmOverlay({
                             <div className="tcm-item-detail">
                               {pt.ontology && <p><b>国标：</b>{pt.ontology}</p>}
                               {detail?.simple && <p><b>概要：</b>{detail.simple}</p>}
-                              {detail?.detailed && <p><b>详解：</b>{detail.detailed}</p>}
+                              {detail?.detailed && <p><b>详解：</b>{detail.detailed}</p>} {onFocusPoint3D && (() => { const foundPt = (bundle?.points ?? []).find((p) => p.name === pt.name || (pt.code && p.code === pt.code)); return foundPt ? (<button type="button" className="tcm-action-btn" onClick={() => { onFocusPoint3D(foundPt); onSelectMeridian3D?.(foundPt.meridian); setOpen(false); }}>在 3D 人体中定位该穴位</button>) : null; })()}
                             </div>
                           )}
                         </div>
@@ -271,8 +271,8 @@ export function TcmOverlay({
                   <h4 className="tcm-sec-title">二十脉循行与主治 ({bundle?.meridians.length ?? 0})</h4>
                   {(bundle?.meridians ?? []).map((m, i) => (
                     <div key={i} className="tcm-item-card static">
-                      <strong>{m.name} {m.code ? `(${m.code})` : ''}</strong>
-                      {m.pathway && <p><b>循行：</b>{m.pathway}</p>}
+                      <strong>{m.name} {m.code || m.id ? `(${m.code || m.id})` : ''}</strong>
+                      {(m.pathway || m.flow) && <p><b>循行：</b>{m.pathway || m.flow}</p>}
                       {m.indications && <p><b>主治：</b>{m.indications}</p>}
                     </div>
                   ))}
@@ -282,7 +282,7 @@ export function TcmOverlay({
                       {bundle.glossary.map((g, i) => (
                         <div key={i} className="tcm-item-card static">
                           <strong>{g.term || g.name || `术语 ${i + 1}`}</strong>
-                          {(g.desc || g.definition) && <p>{g.desc || g.definition}</p>}
+                          {(g.def || g.desc || g.definition) && <p>{g.def || g.desc || g.definition}</p>}
                         </div>
                       ))}
                     </>
