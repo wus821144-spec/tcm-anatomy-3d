@@ -311,4 +311,6 @@ if __name__ == '__main__':
     for p in ['src/engine_3d.js']:
         patch_engine_3d(p)
     for p in ['src/index.html', 'www/index.html']:
-        patch_index_html(p
+        patch_index_html(p)
+      
+# EOF
