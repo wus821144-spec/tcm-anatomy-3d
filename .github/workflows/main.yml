@@ -1,4 +1,4 @@
-name: Build TCM Human Atlas R2 APK
+name: Build Anatomy R1-1.0.1 APK
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 25
 
     steps:
-      - name: Checkout TCM Data & R2 App Overlay
+      - name: Checkout Anatomy R1-1.0.1 Overlay & TCM Data
         uses: actions/checkout@v4
 
       - name: Setup Node.js 22
@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Setup Java 17
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -28,17 +28,20 @@ jobs:
       - name: Setup Gradle Cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Clone Clean Open-Source Base (ashemag/human-atlas) & Deep Core Upgrade
+      - name: Assemble Anatomy R1-1.0.1 Core (Human Atlas + Bilingual + 3D Acupoints + TCM)
         run: |
-          rm -rf /tmp/atlas-r2
+          rm -rf /tmp/atlas-r2 /tmp/zh-bp3d
           git clone --depth 1 https://github.com/ashemag/human-atlas.git /tmp/atlas-r2
+          git clone --depth 1 https://github.com/jixiangying/anatomy.git /tmp/zh-bp3d || true
           mkdir -p /tmp/atlas-r2/public/data
+
           python3 -c '
-          import json, os
+          import json, os, glob
           d1 = json.load(open("www/data/anatomy_tcm_data.json" if os.path.exists("www/data/anatomy_tcm_data.json") else "anatomy_tcm_data.json", encoding="utf-8"))
           d2 = json.load(open("www/data/tcm_medical_kb.json" if os.path.exists("www/data/tcm_medical_kb.json") else "tcm_medical_kb.json", encoding="utf-8"))
           bundle = {
               "meridians": d1.get("meridians", []),
+              "points": d1.get("points", []),
               "full_acupoints_catalog": d1.get("full_acupoints_catalog", []),
               "acupoint_details": d2.get("acupoint_details", {}),
               "tcm_prescriptions": d1.get("tcm_prescriptions", []),
@@ -48,24 +51,34 @@ jobs:
           }
           with open("/tmp/atlas-r2/public/data/tcm_bundle.json", "w", encoding="utf-8") as f:
               json.dump(bundle, f, ensure_ascii=False, separators=(",", ":"))
+
+          zh_map = {}
+          for jp in glob.glob("/tmp/zh-bp3d/**/*.json", recursive=True):
+              try:
+                  obj = json.load(open(jp, encoding="utf-8"))
+                  items = obj if isinstance(obj, list) else (obj.get("parts") or obj.get("models") or obj.get("data") or [])
+                  if isinstance(items, list):
+                      for it in items:
+                          if not isinstance(it, dict): continue
+                          en = (it.get("en_name") or it.get("english") or it.get("name_en") or it.get("name") or "").strip().lower()
+                          zh = (it.get("zh_name") or it.get("chinese") or it.get("name_zh") or it.get("cn_name") or "").strip()
+                          if en and zh and en != zh:
+                              zh_map[en] = zh
+              except Exception:
+                  pass
+          with open("/tmp/atlas-r2/public/data/zh_dict.json", "w", encoding="utf-8") as f:
+              json.dump(zh_map, f, ensure_ascii=False, separators=(",", ":"))
+          print("Built tcm_bundle.json + zh_dict.json entries:", len(zh_map))
           '
+
           cp r2/app/plugin-registry.ts /tmp/atlas-r2/app/plugin-registry.ts
+          cp r2/app/bilingual-dict.ts /tmp/atlas-r2/app/bilingual-dict.ts
           cp r2/app/tcm-panel.tsx /tmp/atlas-r2/app/tcm-panel.tsx
           cp r2/app/carbon-theme.css /tmp/atlas-r2/app/carbon-theme.css
-          python3 -c '
-          p = "/tmp/atlas-r2/app/globals.css"
-          with open(p, "a", encoding="utf-8") as f:
-              f.write("\n@import \"./carbon-theme.css\";\n")
 
-          sc = "/tmp/atlas-r2/app/scene.tsx"
-          st = open(sc, "r", encoding="utf-8").read()
-          st = st.replace("renderer.setClearColor('\''#f2f3f3'\'')", "renderer.setClearColor('\''#05070b'\'')")
-          st = st.replace("color:0xd5d9dc", "color:0x05070b")
-          st = st.replace("color:0xeeeeec", "color:0x0a1019")
-          st = st.replace("color:0x8c969f", "color:0xf59e0b")
-          st = st.replace("color:0xa4aeb8", "color:0x38bdf8")
-          st = st.replace("innerWidth<768?1.5:2", "2")
-          open(sc, "w", encoding="utf-8").write(st)
+          python3 -c '
+          with open("/tmp/atlas-r2/app/globals.css", "a", encoding="utf-8") as f:
+              f.write("\n@import \"./carbon-theme.css\";\n")
 
           an = "/tmp/atlas-r2/app/anatomy.ts"
           at = open(an, "r", encoding="utf-8").read()
@@ -87,12 +100,51 @@ jobs:
               ("name:'\''Connective tissue'\''", "name:'\''结缔组织'\''"),
           ]:
               at = at.replace(en, zh)
+          at = at.replace("export interface SceneState {", "export interface Acupoint3D {name:string;code?:string;meridian:string;pos:[number,number,number]}\nexport interface SceneState {points3D?:Acupoint3D[];showPoints3D?:boolean;activeMeridian?:string;")
           open(an, "w", encoding="utf-8").write(at)
+
+          sc = "/tmp/atlas-r2/app/scene.tsx"
+          st = open(sc, "r", encoding="utf-8").read()
+          st = st.replace("renderer.setClearColor('\''#f2f3f3'\'')", "renderer.setClearColor('\''#05070b'\'')")
+          st = st.replace("color:0xd5d9dc", "color:0x05070b")
+          st = st.replace("color:0xeeeeec", "color:0x0a1019")
+          st = st.replace("color:0x8c969f", "color:0xf59e0b")
+          st = st.replace("color:0xa4aeb8", "color:0x38bdf8")
+          st = st.replace("innerWidth<768?1.5:2", "2")
+          acu_setup = "const acuGroup=new T.Group();scene.add(acuGroup);let lastAcuKey='\'''\'';\n"
+          st = st.replace("const markers=new T.Points(markerGeometry,markerMaterial);", acu_setup + "const markers=new T.Points(markerGeometry,markerMaterial);")
+          acu_tick = (
+              "const acuKey=(s.showPoints3D?'\''1'\'':'\''0'\'')+'\''|'\''+(s.activeMeridian||'\'''\'')+'\''|'\''+(s.points3D?.length||0);\n"
+              "      if(acuKey!==lastAcuKey){\n"
+              "        lastAcuKey=acuKey;acuGroup.clear();\n"
+              "        if(s.showPoints3D&&s.points3D&&s.points3D.length){\n"
+              "          const pts=s.points3D.filter(p=>!s.activeMeridian||s.activeMeridian==='\''全部'\''||p.meridian===s.activeMeridian);\n"
+              "          const sg=new T.SphereGeometry(0.011,12,12);\n"
+              "          const byMer=new Map<string,T.Vector3[]>();\n"
+              "          pts.forEach(p=>{\n"
+              "            const hi=s.activeMeridian&&s.activeMeridian!=='\''全部'\'';\n"
+              "            const m=new T.Mesh(sg,new T.MeshStandardMaterial({color:hi?0xf59e0b:0x38bdf8,emissive:hi?0xf59e0b:0x0ea5e9,emissiveIntensity:0.6,roughness:0.25}));\n"
+              "            m.position.set(p.pos[0],p.pos[1],p.pos[2]);acuGroup.add(m);\n"
+              "            const arr=byMer.get(p.meridian)||[];arr.push(m.position.clone());byMer.set(p.meridian,arr);\n"
+              "          });\n"
+              "          byMer.forEach(arr=>{if(arr.length>=2){const lg=new T.BufferGeometry().setFromPoints(arr);acuGroup.add(new T.Line(lg,new T.LineBasicMaterial({color:0xf59e0b,transparent:true,opacity:0.75})));}});\n"
+              "        }\n"
+              "        dirty=true;\n"
+              "      }\n"
+              "      acuGroup.visible=!!s.showPoints3D&&amount<0.08&&!s.isolate;\n"
+          )
+          st = st.replace("controls.enableRotate=amount<.8;", acu_tick + "      controls.enableRotate=amount<.8;")
+          open(sc, "w", encoding="utf-8").write(st)
 
           px = "/tmp/atlas-r2/app/page.tsx"
           s = open(px, "r", encoding="utf-8").read()
-          s = "import { TcmOverlay } from '\''./tcm-panel'\'';\n" + s
-          s = s.replace("<h1>Human Atlas", "<h1>中医解剖 3D")
+          s = "import { TcmOverlay, type Point3D } from '\''./tcm-panel'\'';\nimport { loadBilingualDict, formatBilingualName, matchesBilingualQuery, type BilingualMap } from '\''./bilingual-dict'\'';\n" + s
+          s = s.replace("const initial:SceneState={explode:0,visible:DEFAULT_VISIBLE,selected:[],isolate:false,view:'\''three-quarter'\'',rotate:false,reset:0};", "const initial:SceneState={explode:0,visible:DEFAULT_VISIBLE,selected:[],isolate:false,view:'\''three-quarter'\'',rotate:false,reset:0,points3D:[],showPoints3D:true,activeMeridian:'\''全部'\''};")
+          s = s.replace("const [chosen,setChosen]=useState<Concept|null>(null);", "const [chosen,setChosen]=useState<Concept|null>(null),[zhDict,setZhDict]=useState<BilingualMap>({});useEffect(()=>{loadBilingualDict().then(setZhDict);},[]);")
+          s = s.replace("c.name.toLowerCase().includes(term)||c.id.toLowerCase().includes(term)", "matchesBilingualQuery(c.name,term,zhDict)||c.id.toLowerCase().includes(term)")
+          s = s.replace("<h1>Human Atlas", "<h1>Anatomy R1-1.0.1")
+          s = s.replace("{chosen?.name}", "{chosen?formatBilingualName(chosen.name,zhDict):'\'''\''}")
+          s = s.replace("{c.name}", "{formatBilingualName(c.name,zhDict)}")
           s = s.replace("Find a structure", "搜索解剖结构")
           s = s.replace(">Systems<", ">系统图层<")
           s = s.replace(">All<", ">全部<")
@@ -104,21 +156,22 @@ jobs:
           s = s.replace(">Isolate structure<", ">孤立观察<")
           s = s.replace(">Show surrounding anatomy<", ">恢复周围结构<")
           s = s.replace(">Clear selection<", ">清除选中<")
-          s = s.replace("</main>;", "  <TcmOverlay onSelectAnatomy={() => {}} />\n  </main>;")
+          s = s.replace("</main>;", "  <TcmOverlay showPoints3D={!!state.showPoints3D} onTogglePoints3D={v=>setState(s=>({...s,showPoints3D:v}))} onPointsLoaded={(pts:Point3D[])=>setState(s=>({...s,points3D:pts}))} activeMeridian3D={state.activeMeridian} onSelectMeridian3D={m=>setState(s=>({...s,activeMeridian:m,showPoints3D:true}))} />\n  </main>;")
           open(px, "w", encoding="utf-8").write(s)
           '
 
-      - name: Build Production Web Bundle & Capacitor Android APK
+      - name: Typecheck, Bundle & Build Signed Anatomy R1-1.0.1 APK
         run: |
           cd /tmp/atlas-r2
           npm ci --legacy-peer-deps
+          npx tsc --noEmit
           npm run build
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           cat > capacitor.config.ts << 'EOF'
           import type { CapacitorConfig } from '@capacitor/cli';
           const config: CapacitorConfig = {
             appId: 'com.tcm.anatomy3d',
-            appName: '中医解剖3D R2',
+            appName: 'Anatomy R1-1.0.1',
             webDir: 'dist',
             android: { allowMixedContent: true }
           };
@@ -131,15 +184,15 @@ jobs:
           ./gradlew assembleDebug
           APK_RAW=app/build/outputs/apk/debug/app-debug.apk
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
-          keytool -genkeypair -v -keystore /tmp/tcm_release.jks -alias tcm3d -keyalg RSA -keysize 2048 -validity 10000 -storepass tcm3dpass -keypass tcm3dpass -dname "CN=TCM Anatomy 3D R2, OU=Medical, O=OpenSource, L=Beijing, S=BJ, C=CN"
+          keytool -genkeypair -v -keystore /tmp/tcm_release.jks -alias tcm3d -keyalg RSA -keysize 2048 -validity 10000 -storepass tcm3dpass -keypass tcm3dpass -dname "CN=Anatomy R1-1.0.1, OU=Medical, O=OpenSource, L=Beijing, S=BJ, C=CN"
           "$BUILD_TOOLS/zipalign" -f -p 4 "$APK_RAW" /tmp/app-aligned.apk
           "$BUILD_TOOLS/apksigner" sign --ks /tmp/tcm_release.jks --ks-key-alias tcm3d --ks-pass pass:tcm3dpass --key-pass pass:tcm3dpass --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out "$APK_RAW" /tmp/app-aligned.apk
           "$BUILD_TOOLS/apksigner" verify --verbose "$APK_RAW"
           ls -lh "$APK_RAW"
 
-      - name: Upload Signed R2 APK Artifact
+      - name: Upload Signed Anatomy R1-1.0.1 APK
         uses: actions/upload-artifact@v4
         with:
-          name: tcm-human-atlas-r2-apk
+          name: Anatomy-R1-1.0.1-apk
           path: /tmp/atlas-r2/android/app/build/outputs/apk/debug/app-debug.apk
           compression-level: 0
