@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Clock, Compass, Eye, Layers, Search, X } from 'lucide-react';
+import { Activity, BookOpen, Clock, Compass, Eye, FileText, Layers, Search, X } from 'lucide-react';
 import { applyCarbonAccent, CARBON_ACCENTS, loadSavedCarbonAccent, r2Plugins, type CarbonAccent } from './plugin-registry';
+import { CtAndNotesPanel, MicroEarViewer } from './micro-ear-plugin';
 
 r2Plugins.register({ id: 'tcm-ziwu-clock', name: '子午流注经络时钟', version: '1.0.1', category: 'tcm' });
 r2Plugins.register({ id: 'tcm-361-acupoints', name: '国标361经穴与方剂护理', version: '1.0.1', category: 'tcm' });
 r2Plugins.register({ id: 'tcm-3d-meridians', name: '3D体表吸附穴位与经络图层', version: '1.0.1', category: 'tcm' });
+r2Plugins.register({ id: 'micro-ear-3d', name: '3D显微解剖与耳穴图谱', version: '1.0.1', category: 'anatomy' });
+r2Plugins.register({ id: 'ct-notes-sync', name: '横断面CT切片与离线笔记', version: '1.0.1', category: 'tool' });
 r2Plugins.register({ id: 'dual-sex-atlas', name: '男女双性别高精度解剖引擎', version: '1.0.1', category: 'anatomy' });
 r2Plugins.register({ id: 'bilingual-bp3d', name: 'BodyParts3D 中英双语词典', version: '1.0.1', category: 'anatomy' });
 r2Plugins.register({ id: 'carbon-theme-switcher', name: '碳墨黑多辅色引擎', version: '1.0.1', category: 'theme' });
@@ -99,7 +102,7 @@ export function TcmOverlay({
   onSelectMeridian3D
 }: TcmOverlayProps) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<'ziwu' | 'points' | 'meridians' | 'rx'>('ziwu');
+  const [tab, setTab] = useState<'ziwu' | 'points' | 'meridians' | 'rx' | 'micro' | 'notes'>('ziwu');
   const [accent, setAccent] = useState<CarbonAccent>(() => loadSavedCarbonAccent());
   const [bundle, setBundle] = useState<TcmBundle | null>(null);
   const [query, setQuery] = useState('');
@@ -162,7 +165,7 @@ export function TcmOverlay({
             <div className="tcm-sheet-head">
               <div>
                 <div className="tcm-eyebrow">Anatomy R1-1.0.1 · 已载入 {r2Plugins.list().length} 项模块</div>
-                <h2>中医经络 · 361经穴与临床百科</h2>
+                <h2>中医经络 · 361经穴与显微临床库</h2>
               </div>
               <button type="button" className="tcm-close" onClick={() => setOpen(false)} aria-label="关闭">
                 <X size={18} />
@@ -195,6 +198,12 @@ export function TcmOverlay({
               </button>
               <button type="button" className={tab === 'rx' ? 'active' : ''} onClick={() => setTab('rx')}>
                 <BookOpen size={13} /> 方剂护理
+              </button>
+              <button type="button" className={tab === 'micro' ? 'active' : ''} onClick={() => setTab('micro')}>
+                <Activity size={13} /> 显微耳穴
+              </button>
+              <button type="button" className={tab === 'notes' ? 'active' : ''} onClick={() => setTab('notes')}>
+                <FileText size={13} /> 影像笔记
               </button>
             </div>
 
@@ -304,6 +313,9 @@ export function TcmOverlay({
                   ))}
                 </div>
               )}
+
+              {tab === 'micro' && <MicroEarViewer />}
+              {tab === 'notes' && <CtAndNotesPanel />}
             </div>
           </aside>
         </div>
