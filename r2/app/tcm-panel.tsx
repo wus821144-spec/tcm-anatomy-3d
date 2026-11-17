@@ -5,6 +5,7 @@ import { applyCarbonAccent, CARBON_ACCENTS, loadSavedCarbonAccent, r2Plugins, ty
 r2Plugins.register({ id: 'tcm-ziwu-clock', name: '子午流注经络时钟', version: '1.0.1', category: 'tcm' });
 r2Plugins.register({ id: 'tcm-361-acupoints', name: '国标361经穴与方剂护理', version: '1.0.1', category: 'tcm' });
 r2Plugins.register({ id: 'tcm-3d-meridians', name: '3D体表吸附穴位与经络图层', version: '1.0.1', category: 'tcm' });
+r2Plugins.register({ id: 'dual-sex-atlas', name: '男女双性别高精度解剖引擎', version: '1.0.1', category: 'anatomy' });
 r2Plugins.register({ id: 'bilingual-bp3d', name: 'BodyParts3D 中英双语词典', version: '1.0.1', category: 'anatomy' });
 r2Plugins.register({ id: 'carbon-theme-switcher', name: '碳墨黑多辅色引擎', version: '1.0.1', category: 'theme' });
 
@@ -64,8 +65,8 @@ interface TcmBundle {
   acupoint_details: Record<string, AcupointDetail>;
   tcm_prescriptions: PrescriptionItem[];
   nursing_protocols: NursingItem[];
-  nursing_details: NursingItem[]
-  glossary?: GlossaryItem[];;
+  nursing_details: NursingItem[];
+  glossary?: GlossaryItem[];
 }
 
 const ZIWU_TABLE = [
@@ -255,6 +256,7 @@ export function TcmOverlay({
                   </div>
                 </div>
               )}
+
               {tab === 'meridians' && (
                 <div className="tcm-stack">
                   <h4 className="tcm-sec-title">二十脉循行与主治 ({bundle?.meridians.length ?? 0})</h4>
