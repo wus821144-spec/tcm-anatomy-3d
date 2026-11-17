@@ -28,10 +28,10 @@ jobs:
       - name: Setup Gradle Cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Assemble Anatomy R1-1.0.1 Core (Human Atlas + Bilingual + 3D Acupoints + TCM)
+      - name: Assemble Dual-Sex Anatomy R1-1.0.1 (Male + Female + Bilingual + Snapped 3D Acupoints + TCM)
         run: |
           rm -rf /tmp/atlas-r2 /tmp/zh-bp3d
-          git clone --depth 1 https://github.com/ashemag/human-atlas.git /tmp/atlas-r2
+          git clone --depth 1 https://github.com/slorksmo/Human-Atlas.git /tmp/atlas-r2
           git clone --depth 1 https://github.com/jixiangying/anatomy.git /tmp/zh-bp3d || true
           mkdir -p /tmp/atlas-r2/public/data
 
@@ -98,6 +98,8 @@ jobs:
               ("name:'\''Reproductive'\''", "name:'\''生殖系统'\''"),
               ("name:'\''Body surface'\''", "name:'\''体表皮肤'\''"),
               ("name:'\''Connective tissue'\''", "name:'\''结缔组织'\''"),
+              ("name:'\''Donor bones'\''", "name:'\''补充骨骼'\''"),
+              ("name:'\''Donor muscles'\''", "name:'\''补充肌群'\''"),
           ]:
               at = at.replace(en, zh)
           at = at.replace("export interface SceneState {", "export interface Acupoint3D {name:string;code?:string;meridian:string;pos:[number,number,number]}\nexport interface SceneState {points3D?:Acupoint3D[];showPoints3D?:boolean;activeMeridian?:string;")
@@ -114,20 +116,31 @@ jobs:
           acu_setup = "const acuGroup=new T.Group();scene.add(acuGroup);let lastAcuKey='\'''\'';\n"
           st = st.replace("const markers=new T.Points(markerGeometry,markerMaterial);", acu_setup + "const markers=new T.Points(markerGeometry,markerMaterial);")
           acu_tick = (
-              "const acuKey=(s.showPoints3D?'\''1'\'':'\''0'\'')+'\''|'\''+(s.activeMeridian||'\'''\'')+'\''|'\''+(s.points3D?.length||0);\n"
+              "const acuKey=(ready?'\''R'\'':'\''L'\'')+'\''|'\''+(s.showPoints3D?'\''1'\'':'\''0'\'')+'\''|'\''+(s.activeMeridian||'\'''\'')+'\''|'\''+(s.points3D?.length||0);\n"
               "      if(acuKey!==lastAcuKey){\n"
               "        lastAcuKey=acuKey;acuGroup.clear();\n"
-              "        if(s.showPoints3D&&s.points3D&&s.points3D.length){\n"
+              "        if(ready&&s.showPoints3D&&s.points3D&&s.points3D.length){\n"
+              "          const solidTargets=pickers.filter((m,idx)=>!!m&&atlas.parts[idx]?.system!=='\''integumentary'\'') as T.Mesh[];\n"
+              "          const snapRc=new T.Raycaster();\n"
               "          const pts=s.points3D.filter(p=>!s.activeMeridian||s.activeMeridian==='\''全部'\''||p.meridian===s.activeMeridian);\n"
-              "          const sg=new T.SphereGeometry(0.011,12,12);\n"
+              "          const sg=new T.SphereGeometry(0.010,12,12);\n"
               "          const byMer=new Map<string,T.Vector3[]>();\n"
               "          pts.forEach(p=>{\n"
               "            const hi=s.activeMeridian&&s.activeMeridian!=='\''全部'\'';\n"
-              "            const m=new T.Mesh(sg,new T.MeshStandardMaterial({color:hi?0xf59e0b:0x38bdf8,emissive:hi?0xf59e0b:0x0ea5e9,emissiveIntensity:0.6,roughness:0.25}));\n"
-              "            m.position.set(p.pos[0],p.pos[1],p.pos[2]);acuGroup.add(m);\n"
-              "            const arr=byMer.get(p.meridian)||[];arr.push(m.position.clone());byMer.set(p.meridian,arr);\n"
+              "            const m=new T.Mesh(sg,new T.MeshStandardMaterial({color:hi?0xf59e0b:0x38bdf8,emissive:hi?0xf59e0b:0x0ea5e9,emissiveIntensity:0.65,roughness:0.25}));\n"
+              "            let finalPos=new T.Vector3(p.pos[0],p.pos[1],p.pos[2]);\n"
+              "            if(solidTargets.length){\n"
+              "              const mid=new T.Vector3(0,p.pos[1],0);\n"
+              "              const outDir=new T.Vector3(p.pos[0],0,p.pos[2]);\n"
+              "              if(outDir.lengthSq()<0.0001)outDir.set(0,0,1);outDir.normalize();\n"
+              "              snapRc.set(mid.clone().addScaledVector(outDir,0.75),outDir.clone().negate());\n"
+              "              const hits=snapRc.intersectObjects(solidTargets,false);\n"
+              "              if(hits.length){finalPos.copy(hits[0].point).addScaledVector(outDir,0.005);}\n"
+              "            }\n"
+              "            m.position.copy(finalPos);acuGroup.add(m);\n"
+              "            const arr=byMer.get(p.meridian)||[];arr.push(finalPos.clone());byMer.set(p.meridian,arr);\n"
               "          });\n"
-              "          byMer.forEach(arr=>{if(arr.length>=2){const lg=new T.BufferGeometry().setFromPoints(arr);acuGroup.add(new T.Line(lg,new T.LineBasicMaterial({color:0xf59e0b,transparent:true,opacity:0.75})));}});\n"
+              "          byMer.forEach(arr=>{if(arr.length>=2){const lg=new T.BufferGeometry().setFromPoints(arr);acuGroup.add(new T.Line(lg,new T.LineBasicMaterial({color:0xf59e0b,transparent:true,opacity:0.78})));}});\n"
               "        }\n"
               "        dirty=true;\n"
               "      }\n"
@@ -145,17 +158,28 @@ jobs:
           s = s.replace("<h1>Human Atlas", "<h1>Anatomy R1-1.0.1")
           s = s.replace("{chosen?.name}", "{chosen?formatBilingualName(chosen.name,zhDict):'\'''\''}")
           s = s.replace("{c.name}", "{formatBilingualName(c.name,zhDict)}")
-          s = s.replace("Find a structure", "搜索解剖结构")
-          s = s.replace(">Systems<", ">系统图层<")
-          s = s.replace(">All<", ">全部<")
-          s = s.replace(">Skeleton<", ">骨骼<")
-          s = s.replace(">Organs<", ">脏腑<")
-          s = s.replace(">Hide all<", ">全部隐藏<")
-          s = s.replace(">Explode anatomy<", ">爆炸分解<")
-          s = s.replace(">Reset<", ">重置<")
-          s = s.replace(">Isolate structure<", ">孤立观察<")
-          s = s.replace(">Show surrounding anatomy<", ">恢复周围结构<")
-          s = s.replace(">Clear selection<", ">清除选中<")
+          for en, zh in [
+              ("Find a structure", "搜索解剖结构"),
+              (">Systems<", ">系统图层<"),
+              (">All<", ">全部<"),
+              (">Skeleton<", ">骨骼<"),
+              (">Organs<", ">脏腑<"),
+              (">Hide all<", ">全部隐藏<"),
+              (">Explode anatomy<", ">爆炸分解<"),
+              (">Reset<", ">重置<"),
+              (">Isolate structure<", ">孤立观察<"),
+              (">Show surrounding anatomy<", ">恢复周围结构<"),
+              (">Clear selection<", ">清除选中<"),
+              ("Preparing the anatomy", "正在加载高精度三维人体"),
+              ("Drag to orbit", "单指旋转"),
+              ("Drag to pan", "单指平移"),
+              ("Pinch to zoom", "双指缩放"),
+              ("Tap to inspect", "点击结构查看"),
+              ("Source & credits", "开源数据来源"),
+              (">Male<", ">男模<"),
+              (">Female<", ">女模<"),
+          ]:
+              s = s.replace(en, zh)
           s = s.replace("</main>;", "  <TcmOverlay showPoints3D={!!state.showPoints3D} onTogglePoints3D={v=>setState(s=>({...s,showPoints3D:v}))} onPointsLoaded={(pts:Point3D[])=>setState(s=>({...s,points3D:pts}))} activeMeridian3D={state.activeMeridian} onSelectMeridian3D={m=>setState(s=>({...s,activeMeridian:m,showPoints3D:true}))} />\n  </main>;")
           open(px, "w", encoding="utf-8").write(s)
           '
