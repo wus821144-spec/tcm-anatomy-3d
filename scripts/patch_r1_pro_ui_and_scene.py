@@ -18,10 +18,11 @@ if os.path.exists(e3d_path):
   )
   src = src.replace(old_filter, new_filter)
 
+  src = src.replace("const ctr = new THREE.Vector3(); box.getCenter(ctr);\n          if (ctr.y < -0.05 || ctr.y > 1.85 || Math.abs(ctr.x) > 0.52 || Math.abs(ctr.z) > 0.42) { toRemove.push(obj); return; }", "")
   if 'wBox' not in src:
     src = src.replace(
       "if (vCount <= 256 && maxD > 0.14 && minD < 0.005 * maxD) { toRemove.push(obj); return; }",
-      "if (vCount <= 256 && maxD > 0.14 && minD < 0.005 * maxD) { toRemove.push(obj); return; }\n          obj.updateWorldMatrix(true, false);\n          const wBox = new THREE.Box3().setFromObject(obj);\n          const ctr = new THREE.Vector3(); wBox.getCenter(ctr);\n          if (ctr.y < 0.0 || ctr.y > 1.82 || Math.abs(ctr.x) > 0.48 || Math.abs(ctr.z) > 0.35) { toRemove.push(obj); return; }"
+      "if (vCount <= 256 && maxD > 0.14 && minD < 0.005 * maxD) { toRemove.push(obj); return; }\n          obj.updateWorldMatrix(true, false);\n          const wBox = new THREE.Box3().setFromObject(obj);\n          const wCtr = new THREE.Vector3(); wBox.getCenter(wCtr);\n          if (wCtr.y < 0.0 || wCtr.y > 1.82 || Math.abs(wCtr.x) > 0.48 || Math.abs(wCtr.z) > 0.35) { toRemove.push(obj); return; }"
     )
 
   src = src.replace(
