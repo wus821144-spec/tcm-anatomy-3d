@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BookOpen, Clock, Compass, Search, X } from 'lucide-react';
+import { applyCarbonAccent, CARBON_ACCENTS, loadSavedCarbonAccent, r2Plugins, type CarbonAccent } from './plugin-registry';
+
+r2Plugins.register({ id: 'tcm-ziwu-clock', name: '子午流注经络时钟', version: '2.0', category: 'tcm' });
+r2Plugins.register({ id: 'tcm-361-acupoints', name: '国标361经穴与方剂护理', version: '2.0', category: 'tcm' });
+r2Plugins.register({ id: 'carbon-theme-switcher', name: '碳墨黑多辅色引擎', version: '2.0', category: 'theme' });
 
 interface AcupointItem {
   code?: string;
@@ -14,9 +19,6 @@ interface AcupointItem {
 interface MeridianItem {
   name: string;
   code?: string;
-  category?: string;
-  pathway?: string;
-  indications?: string;
 }
 
 interface PrescriptionItem {
@@ -61,10 +63,15 @@ const ZIWU_TABLE = [
 export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: string) => void }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'ziwu' | 'points' | 'rx'>('ziwu');
+  const [accent, setAccent] = useState<CarbonAccent>(() => loadSavedCarbonAccent());
   const [bundle, setBundle] = useState<TcmBundle | null>(null);
   const [query, setQuery] = useState('');
   const [meridianFilter, setMeridianFilter] = useState('全部');
   const [expandedPoint, setExpandedPoint] = useState<string | null>(null);
+
+  useEffect(() => {
+    applyCarbonAccent(accent);
+  }, [accent]);
 
   useEffect(() => {
     fetch('/data/tcm_bundle.json')
@@ -113,12 +120,26 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
           <aside className="tcm-sheet glass" onClick={(e) => e.stopPropagation()}>
             <div className="tcm-sheet-head">
               <div>
-                <div className="tcm-eyebrow">TRADITIONAL CHINESE MEDICINE · 离线图谱</div>
+                <div className="tcm-eyebrow">插件引擎已载入 {r2Plugins.list().length} 项 · 碳墨黑离线图谱</div>
                 <h2>中医经络 · 361经穴与临床百科</h2>
               </div>
               <button type="button" className="tcm-close" onClick={() => setOpen(false)} aria-label="关闭">
                 <X size={18} />
               </button>
+            </div>
+
+            <div className="tcm-theme-row" aria-label="碳墨黑辅色切换">
+              {CARBON_ACCENTS.map((a) => (
+                <button
+                  type="button"
+                  key={a.id}
+                  className={`tcm-theme-pill ${accent === a.id ? 'active' : ''}`}
+                  onClick={() => setAccent(a.id)}
+                >
+                  <span className="tcm-theme-dot" style={{ background: a.hex }} />
+                  {a.label}
+                </button>
+              ))}
             </div>
 
             <div className="tcm-tabs">
