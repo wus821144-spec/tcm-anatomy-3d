@@ -160,17 +160,23 @@ jobs:
       - name: Setup Gradle Cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build Standalone Debug APK
+      - name: Build & Sign Standalone APK (v1+v2+v3)
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
-          APK_SIZE=$(stat -c%s app/build/outputs/apk/debug/app-debug.apk)
+          APK_RAW=app/build/outputs/apk/debug/app-debug.apk
+          APK_SIZE=$(stat -c%s "$APK_RAW")
           echo "Built APK size: $APK_SIZE bytes"
           if [ "$APK_SIZE" -lt 5000000 ]; then
             echo "ERROR: APK size too small ($APK_SIZE bytes), 3D models may be missing!"
             exit 1
           fi
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          keytool -genkeypair -v -keystore /tmp/tcm_release.jks -alias tcm3d -keyalg RSA -keysize 2048 -validity 10000 -storepass tcm3dpass -keypass tcm3dpass -dname "CN=TCM Anatomy 3D, OU=Medical, O=OpenSource, L=Beijing, S=BJ, C=CN"
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$APK_RAW" /tmp/app-aligned.apk
+          "$BUILD_TOOLS/apksigner" sign --ks /tmp/tcm_release.jks --ks-key-alias tcm3d --ks-pass pass:tcm3dpass --key-pass pass:tcm3dpass --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out "$APK_RAW" /tmp/app-aligned.apk
+          "$BUILD_TOOLS/apksigner" verify --verbose "$APK_RAW"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
