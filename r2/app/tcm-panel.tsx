@@ -9,11 +9,17 @@ r2Plugins.register({ id: 'carbon-theme-switcher', name: '碳墨黑多辅色引�
 interface AcupointItem {
   code?: string;
   name: string;
-  pinyin?: string;
   meridian?: string;
-  location?: string;
-  indications?: string;
-  method?: string;
+  zone?: string;
+  ontology?: string;
+}
+
+interface AcupointDetail {
+  code?: string;
+  meridian?: string;
+  type?: string;
+  simple?: string;
+  detailed?: string;
 }
 
 interface MeridianItem {
@@ -22,24 +28,25 @@ interface MeridianItem {
 }
 
 interface PrescriptionItem {
-  name: string;
-  syndrome?: string;
-  points?: string;
-  method?: string;
+  disease?: string;
+  mainPoints?: string;
+  adjunct?: string;
+  care?: string;
 }
 
 interface NursingItem {
-  title?: string;
   name?: string;
-  steps?: string;
-  notes?: string;
-  content?: string;
+  indications?: string;
+  params?: string;
+  cautions?: string;
+  simple?: string;
+  detailed?: string;
 }
 
 interface TcmBundle {
   meridians: MeridianItem[];
   full_acupoints_catalog: AcupointItem[];
-  acupoint_details: Record<string, Partial<AcupointItem>>;
+  acupoint_details: Record<string, AcupointDetail>;
   tcm_prescriptions: PrescriptionItem[];
   nursing_protocols: NursingItem[];
   nursing_details: NursingItem[];
@@ -69,9 +76,7 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
   const [meridianFilter, setMeridianFilter] = useState('全部');
   const [expandedPoint, setExpandedPoint] = useState<string | null>(null);
 
-  useEffect(() => {
-    applyCarbonAccent(accent);
-  }, [accent]);
+  useEffect(() => { applyCarbonAccent(accent); }, [accent]);
 
   useEffect(() => {
     fetch('/data/tcm_bundle.json')
@@ -92,25 +97,20 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
       .filter((p) => {
         if (meridianFilter !== '全部' && p.meridian !== meridianFilter) return false;
         if (!q) return true;
+        const det = bundle.acupoint_details?.[p.name];
         return (
           (p.name || '').toLowerCase().includes(q) ||
           (p.code || '').toLowerCase().includes(q) ||
-          (p.pinyin || '').toLowerCase().includes(q) ||
           (p.meridian || '').toLowerCase().includes(q) ||
-          (p.indications || '').toLowerCase().includes(q)
+          (det?.detailed || '').toLowerCase().includes(q)
         );
       })
-      .slice(0, 60);
+      .slice(0, 80);
   }, [bundle, query, meridianFilter]);
 
   return (
     <>
-      <button
-        type="button"
-        className="tcm-fab glass"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="打开中医经络与子午流注"
-      >
+      <button type="button" className="tcm-fab glass" onClick={() => setOpen((v) => !v)} aria-label="打开中医经络与子午流注">
         <Compass size={16} />
         <span>中医经络 · {currentZiwu.shichen.split(' ')[0]}</span>
       </button>
@@ -130,12 +130,7 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
 
             <div className="tcm-theme-row" aria-label="碳墨黑辅色切换">
               {CARBON_ACCENTS.map((a) => (
-                <button
-                  type="button"
-                  key={a.id}
-                  className={`tcm-theme-pill ${accent === a.id ? 'active' : ''}`}
-                  onClick={() => setAccent(a.id)}
-                >
+                <button key={a.id} type="button" className={`tcm-theme-pill ${accent === a.id ? 'active' : ''}`} onClick={() => setAccent(a.id)}>
                   <span className="tcm-theme-dot" style={{ background: a.hex }} />
                   {a.label}
                 </button>
@@ -163,29 +158,14 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
                     <p className="tcm-meta">当令要穴：<strong>{currentZiwu.point}</strong></p>
                     <p className="tcm-verse">{currentZiwu.verse}</p>
                     {onSelectAnatomy && (
-                      <button
-                        type="button"
-                        className="tcm-action-btn"
-                        onClick={() => {
-                          setTab('points');
-                          setMeridianFilter(currentZiwu.meridian);
-                        }}
-                      >
+                      <button type="button" className="tcm-action-btn" onClick={() => { setTab('points'); setMeridianFilter(currentZiwu.meridian); }}>
                         查看该经络全部穴位
                       </button>
                     )}
                   </div>
                   <div className="tcm-grid">
                     {ZIWU_TABLE.map((z) => (
-                      <button
-                        type="button"
-                        key={z.shichen}
-                        className={`tcm-mini-card ${z.shichen === currentZiwu.shichen ? 'now' : ''}`}
-                        onClick={() => {
-                          setMeridianFilter(z.meridian);
-                          setTab('points');
-                        }}
-                      >
+                      <button type="button" key={z.shichen} className={`tcm-mini-card ${z.shichen === currentZiwu.shichen ? 'now' : ''}`} onClick={() => { setMeridianFilter(z.meridian); setTab('points'); }}>
                         <strong>{z.shichen.split(' ')[0]} · {z.meridian}</strong>
                         <span>{z.point}</span>
                       </button>
@@ -198,52 +178,29 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
                 <div className="tcm-stack">
                   <div className="tcm-search-bar">
                     <Search size={15} />
-                    <input
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="搜索穴位名称、编码(LU1)、拼音或主治..."
-                    />
+                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索穴位名称、编码(LU1)、经络或主治..." />
                   </div>
                   <div className="tcm-chip-row">
-                    <button
-                      type="button"
-                      className={meridianFilter === '全部' ? 'active' : ''}
-                      onClick={() => setMeridianFilter('全部')}
-                    >
-                      全部
-                    </button>
+                    <button type="button" className={meridianFilter === '全部' ? 'active' : ''} onClick={() => setMeridianFilter('全部')}>全部</button>
                     {(bundle?.meridians ?? []).map((m) => (
-                      <button
-                        type="button"
-                        key={m.name}
-                        className={meridianFilter === m.name ? 'active' : ''}
-                        onClick={() => setMeridianFilter(m.name)}
-                      >
-                        {m.name}
-                      </button>
+                      <button type="button" key={m.name} className={meridianFilter === m.name ? 'active' : ''} onClick={() => setMeridianFilter(m.name)}>{m.name}</button>
                     ))}
                   </div>
                   <div className="tcm-list">
                     {filteredPoints.map((pt) => {
-                      const detail = bundle?.acupoint_details?.[pt.name] || {};
+                      const detail = bundle?.acupoint_details?.[pt.name];
                       const isExp = expandedPoint === pt.name;
                       return (
                         <div key={`${pt.code || ''}-${pt.name}`} className="tcm-item-card">
-                          <button
-                            type="button"
-                            className="tcm-item-trigger"
-                            onClick={() => setExpandedPoint(isExp ? null : pt.name)}
-                          >
-                            <span>
-                              <strong>{pt.name}</strong> {pt.code ? `(${pt.code})` : ''}
-                            </span>
+                          <button type="button" className="tcm-item-trigger" onClick={() => setExpandedPoint(isExp ? null : pt.name)}>
+                            <span><strong>{pt.name}</strong> {pt.code ? `(${pt.code})` : ''}</span>
                             <small>{pt.meridian || '经外奇穴'}</small>
                           </button>
                           {isExp && (
                             <div className="tcm-item-detail">
-                              {(detail.location || pt.location) && <p><b>定位：</b>{detail.location || pt.location}</p>}
-                              {(detail.indications || pt.indications) && <p><b>主治：</b>{detail.indications || pt.indications}</p>}
-                              {(detail.method || pt.method) && <p><b>刺灸：</b>{detail.method || pt.method}</p>}
+                              {pt.ontology && <p><b>国标：</b>{pt.ontology}</p>}
+                              {detail?.simple && <p><b>概要：</b>{detail.simple}</p>}
+                              {detail?.detailed && <p><b>详解：</b>{detail.detailed}</p>}
                             </div>
                           )}
                         </div>
@@ -258,18 +215,20 @@ export function TcmOverlay({ onSelectAnatomy }: { onSelectAnatomy?: (term: strin
                   <h4 className="tcm-sec-title">辨证配穴处方 ({bundle?.tcm_prescriptions.length ?? 0})</h4>
                   {(bundle?.tcm_prescriptions ?? []).map((rx, i) => (
                     <div key={i} className="tcm-item-card static">
-                      <strong>{rx.name}</strong>
-                      {rx.syndrome && <p><b>证候：</b>{rx.syndrome}</p>}
-                      {rx.points && <p><b>配穴：</b>{rx.points}</p>}
-                      {rx.method && <p><b>治法：</b>{rx.method}</p>}
+                      <strong>{rx.disease || `处方 ${i + 1}`}</strong>
+                      {rx.mainPoints && <p><b>主穴：</b>{rx.mainPoints}</p>}
+                      {rx.adjunct && <p><b>配穴：</b>{rx.adjunct}</p>}
+                      {rx.care && <p><b>护理：</b>{rx.care}</p>}
                     </div>
                   ))}
                   <h4 className="tcm-sec-title">中医护理操作规范 ({(bundle?.nursing_protocols.length ?? 0) + (bundle?.nursing_details.length ?? 0)})</h4>
                   {[...(bundle?.nursing_protocols ?? []), ...(bundle?.nursing_details ?? [])].map((n, i) => (
                     <div key={i} className="tcm-item-card static">
-                      <strong>{n.title || n.name || `护理规范 ${i + 1}`}</strong>
-                      {(n.steps || n.content) && <p>{n.steps || n.content}</p>}
-                      {n.notes && <p><b>注意：</b>{n.notes}</p>}
+                      <strong>{n.name || `护理规范 ${i + 1}`}</strong>
+                      {n.indications && <p><b>适应症：</b>{n.indications}</p>}
+                      {n.params && <p><b>参数：</b>{n.params}</p>}
+                      {n.cautions && <p><b>注意：</b>{n.cautions}</p>}
+                      {n.detailed && <p><b>详解：</b>{n.detailed}</p>}
                     </div>
                   ))}
                 </div>
