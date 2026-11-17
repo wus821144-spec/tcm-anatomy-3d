@@ -1,9 +1,103 @@
-name: Build Industrial 3D Anatomy APK (v7)
+name: Build TCM Human Atlas R2 APK
 
 on:
   workflow_dispatch:
   push:
     branches: [ main, master ]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout TCM Data & R2 App Overlay
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle Cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Clone Clean Open-Source Base (ashemag/human-atlas) & Merge TCM R2
+        run: |
+          rm -rf /tmp/atlas-r2
+          git clone --depth 1 https://github.com/ashemag/human-atlas.git /tmp/atlas-r2
+          mkdir -p /tmp/atlas-r2/public/data
+          python3 -c '
+          import json, os
+          d1 = json.load(open("www/data/anatomy_tcm_data.json" if os.path.exists("www/data/anatomy_tcm_data.json") else "anatomy_tcm_data.json", encoding="utf-8"))
+          d2 = json.load(open("www/data/tcm_medical_kb.json" if os.path.exists("www/data/tcm_medical_kb.json") else "tcm_medical_kb.json", encoding="utf-8"))
+          bundle = {
+              "meridians": d1.get("meridians", []),
+              "full_acupoints_catalog": d1.get("full_acupoints_catalog", []),
+              "acupoint_details": d2.get("acupoint_details", {}),
+              "tcm_prescriptions": d1.get("tcm_prescriptions", []),
+              "nursing_protocols": d1.get("nursing_protocols", []),
+              "nursing_details": d2.get("nursing_details", []),
+              "glossary": d1.get("glossary", [])
+          }
+          with open("/tmp/atlas-r2/public/data/tcm_bundle.json", "w", encoding="utf-8") as f:
+              json.dump(bundle, f, ensure_ascii=False, separators=(",", ":"))
+          '
+          cp r2/app/tcm-panel.tsx /tmp/atlas-r2/app/tcm-panel.tsx
+          cp r2/app/carbon-theme.css /tmp/atlas-r2/app/carbon-theme.css
+          python3 -c '
+          p = "/tmp/atlas-r2/app/globals.css"
+          with open(p, "a", encoding="utf-8") as f:
+              f.write("\n@import \"./carbon-theme.css\";\n")
+          px = "/tmp/atlas-r2/app/page.tsx"
+          s = open(px, "r", encoding="utf-8").read()
+          s = "import { TcmOverlay } from '\''./tcm-panel'\'';\n" + s
+          s = s.replace("<h1>Human Atlas", "<h1>中医解剖 3D")
+          s = s.replace("</main>;", "  <TcmOverlay onSelectAnatomy={() => {}} />\n  </main>;")
+          open(px, "w", encoding="utf-8").write(s)
+          '
+
+      - name: Build Production Web Bundle & Capacitor Android APK
+        run: |
+          cd /tmp/atlas-r2
+          npm ci --legacy-peer-deps
+          npm run build
+          npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
+          cat > capacitor.config.ts << 'EOF'
+          import type { CapacitorConfig } from '@capacitor/cli';
+          const config: CapacitorConfig = {
+            appId: 'com.tcm.anatomy3d',
+            appName: '中医解剖3D R2',
+            webDir: 'dist',
+            android: { allowMixedContent: true }
+          };
+          export default config;
+          EOF
+          npx cap add android
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          APK_RAW=app/build/outputs/apk/debug/app-debug.apk
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          keytool -genkeypair -v -keystore /tmp/tcm_release.jks -alias tcm3d -keyalg RSA -keysize 2048 -validity 10000 -storepass tcm3dpass -keypass tcm3dpass -dname "CN=TCM Anatomy 3D R2, OU=Medical, O=OpenSource, L=Beijing, S=BJ, C=CN"
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$APK_RAW" /tmp/app-aligned.apk
+          "$BUILD_TOOLS/apksigner" sign --ks /tmp/tcm_release.jks --ks-key-alias tcm3d --ks-pass pass:tcm3dpass --key-pass pass:tcm3dpass --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out "$APK_RAW" /tmp/app-aligned.apk
+          "$BUILD_TOOLS/apksigner" verify --verbose "$APK_RAW"
+          ls -lh "$APK_RAW"
+
+      - name: Upload Signed R2 APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tcm-human-atlas-r2-apk
+          path: /tmp/atlas-r2/android/app/build/outputs/apk/debug/app-debug.apk
+          compression-level: 0 ]
 
 jobs:
   build-apk:
