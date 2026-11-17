@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
-R1-Pro Visual, Material, Layer-Color, Anti-Clipping & Upright-Camera Patch
-- Replaces sanitizeAndUpgradeModelRoot, upgradeBiologicalMaterial,
-  applyLayerAndGenderStyles, and autoFitAnatomyIfNeeded via balanced-brace matching.
-- Eliminates half-white/half-maroon meshes and assigns distinct per-layer colors.
-- Removes misplaced Visceral meshes below pelvis (y < 0.58) and outliers below feet (y < -0.08).
-- Slightly insets Visceral geometry around each organ's own center (0.955x) to prevent organ-through-muscle clipping.
-- Hides Skin by default on startup and frames full standing body upright from +Z.
+R1-Pro Visual, Material, Commercial Studio Art, Device Adaptation & Anti-Clipping Patch
+- Balanced-brace replacement of sanitizeAndUpgradeModelRoot, upgradeBiologicalMaterial,
+  applyLayerAndGenderStyles, autoFitAnatomyIfNeeded, and highlightSelectedMesh.
+- Commercial-grade PBR: auto-generates missing UVs for muscle/bone normal maps,
+  adds shadow casting and refined exposure.
+- Device adaptation (Vivo X60 / Redmi K80 Ultra): caps DPR cleanly (2.0 / 1.25 eco),
+  uses container-accurate resize.
+- Distinct per-layer anatomical colors, visceral anti-clipping inset (0.955x),
+  pelvis-below visceral culling (y < 0.58), Skin hidden on startup, upright +Z camera.
 """
 import os
 import re
@@ -97,6 +99,15 @@ NEW_SANITIZE_FN = """  function sanitizeAndUpgradeModelRoot(root, upgradeMateria
 
 NEW_UPGRADE_MAT_FN = """  function upgradeBiologicalMaterial(mesh) {
     if (!mesh.isMesh || !mesh.material) return;
+    if (mesh.geometry && !mesh.geometry.attributes.uv && mesh.geometry.attributes.position) {
+      const pos = mesh.geometry.attributes.position;
+      const uvs = new Float32Array(pos.count * 2);
+      for (let i = 0; i < pos.count; i++) {
+        uvs[i * 2] = (pos.getX(i) + pos.getZ(i)) * 2.5;
+        uvs[i * 2 + 1] = pos.getY(i) * 2.5;
+      }
+      mesh.geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    }
     const parts = (mesh.name || '').split('__');
     const sys = parts.length >= 2 ? parts[0] : 'Visceral';
     const lowN = (mesh.name || '').toLowerCase();
@@ -113,8 +124,9 @@ NEW_UPGRADE_MAT_FN = """  function upgradeBiologicalMaterial(mesh) {
       const c = new THREE.Color(0xb84339);
       c.offsetHSL(jitter * 0.12, jitter * 0.3, jitter * 0.45);
       mesh.material = new THREE.MeshPhysicalMaterial({
-        color: c, normalMap: MUSCLE_NORMAL, normalScale: new THREE.Vector2(0.45, 0.45),
-        roughness: 0.56, metalness: 0.02, clearcoat: 0.08, clearcoatRoughness: 0.45,
+        color: c, normalMap: MUSCLE_NORMAL, normalScale: new THREE.Vector2(0.42, 0.42),
+        roughness: 0.54, metalness: 0.02, clearcoat: 0.10, clearcoatRoughness: 0.42,
+        sheen: 0.22, sheenColor: new THREE.Color(0xfca5a5),
         polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
         clippingPlanes: activeClips, side: THREE.DoubleSide
       });
@@ -122,15 +134,16 @@ NEW_UPGRADE_MAT_FN = """  function upgradeBiologicalMaterial(mesh) {
       const c = new THREE.Color(0xebe2ce);
       c.offsetHSL(0, 0, jitter * 0.35);
       mesh.material = new THREE.MeshStandardMaterial({
-        color: c, normalMap: BONE_NORMAL, normalScale: new THREE.Vector2(0.25, 0.25),
-        roughness: 0.68, metalness: 0.02, clippingPlanes: activeClips, side: THREE.DoubleSide
+        color: c, normalMap: BONE_NORMAL, normalScale: new THREE.Vector2(0.28, 0.28),
+        roughness: 0.64, metalness: 0.03, envMapIntensity: 0.85,
+        clippingPlanes: activeClips, side: THREE.DoubleSide
       });
     } else if (sys === 'LigamentJoint') {
       const c = new THREE.Color(0xbae6fd);
       c.offsetHSL(0, 0, jitter * 0.25);
       mesh.material = new THREE.MeshPhysicalMaterial({
         color: c, normalMap: MUSCLE_NORMAL, normalScale: new THREE.Vector2(0.18, 0.18),
-        roughness: 0.42, sheen: 0.50, sheenColor: new THREE.Color(0xe0f2fe),
+        roughness: 0.40, sheen: 0.55, sheenColor: new THREE.Color(0xe0f2fe),
         clippingPlanes: activeClips, side: THREE.DoubleSide
       });
     } else if (sys === 'Neurovascular') {
@@ -141,8 +154,8 @@ NEW_UPGRADE_MAT_FN = """  function upgradeBiologicalMaterial(mesh) {
       else if (/lymph|thoracic duct/.test(lowN)) { hex = 0x10b981; sub = 'Lymphatic'; }
       mesh.userData.subSys = sub;
       mesh.material = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color(hex), emissive: new THREE.Color(hex), emissiveIntensity: 0.12,
-        roughness: 0.32, clearcoat: 0.28, clearcoatRoughness: 0.30,
+        color: new THREE.Color(hex), emissive: new THREE.Color(hex), emissiveIntensity: 0.14,
+        roughness: 0.30, clearcoat: 0.32, clearcoatRoughness: 0.28,
         clippingPlanes: activeClips, side: THREE.DoubleSide
       });
     } else if (sys === 'Visceral') {
@@ -158,15 +171,15 @@ NEW_UPGRADE_MAT_FN = """  function upgradeBiologicalMaterial(mesh) {
       const c = new THREE.Color(hex);
       c.offsetHSL(0, 0, jitter * 0.25);
       mesh.material = new THREE.MeshPhysicalMaterial({
-        color: c, roughness: 0.42, roughnessMap: BIO_ROUGHNESS,
-        clearcoat: 0.25, clearcoatRoughness: 0.35, envMapIntensity: 0.95,
+        color: c, roughness: 0.40, roughnessMap: BIO_ROUGHNESS,
+        clearcoat: 0.28, clearcoatRoughness: 0.32, envMapIntensity: 1.0,
         polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2,
         clippingPlanes: activeClips, side: THREE.DoubleSide
       });
     } else if (sys === 'Skin') {
       mesh.material = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color(0xd6a88f), normalMap: BONE_NORMAL, normalScale: new THREE.Vector2(0.10, 0.10),
-        roughness: 0.52, clearcoat: 0.10, sheen: 0.30, sheenColor: new THREE.Color(0xffedd5),
+        roughness: 0.50, clearcoat: 0.10, sheen: 0.35, sheenColor: new THREE.Color(0xffedd5),
         transparent: true, opacity: state.skinOpacity, depthWrite: false,
         clippingPlanes: activeClips, side: THREE.DoubleSide
       });
@@ -176,7 +189,11 @@ NEW_UPGRADE_MAT_FN = """  function upgradeBiologicalMaterial(mesh) {
         clippingPlanes: activeClips, side: THREE.DoubleSide
       });
     }
-    if (oldMat && oldMat.dispose) oldMat.dispose();
+    if (sys !== 'Skin') { mesh.castShadow = true; mesh.receiveShadow = true; }
+    if (oldMat) {
+      if (Array.isArray(oldMat)) oldMat.forEach((m) => m && m.dispose && m.dispose());
+      else if (oldMat.dispose) oldMat.dispose();
+    }
   }"""
 
 NEW_APPLY_LAYERS_FN = """  function applyLayerAndGenderStyles() {
@@ -205,16 +222,20 @@ NEW_APPLY_LAYERS_FN = """  function applyLayerAndGenderStyles() {
         c.scale.copy(c.userData._origScale);
       }
       if (c.material) {
-        if (state.ghostMode) {
-          c.material.transparent = true; c.material.opacity = 0.16; c.material.depthWrite = false;
-        } else if (sys === 'Skin') {
-          c.material.color.setHex(0xd6a88f);
-          c.material.transparent = state.skinOpacity < 0.99;
-          c.material.opacity = state.skinOpacity;
-          c.material.depthWrite = state.skinOpacity >= 0.99;
-        } else {
-          c.material.transparent = false; c.material.opacity = 1.0; c.material.depthWrite = true;
-        }
+        const mats = Array.isArray(c.material) ? c.material : [c.material];
+        mats.forEach((m) => {
+          if (!m) return;
+          if (state.ghostMode) {
+            m.transparent = true; m.opacity = 0.16; m.depthWrite = false;
+          } else if (sys === 'Skin') {
+            if (m.color) m.color.setHex(0xd6a88f);
+            m.transparent = state.skinOpacity < 0.99;
+            m.opacity = state.skinOpacity;
+            m.depthWrite = state.skinOpacity >= 0.99;
+          } else {
+            m.transparent = false; m.opacity = 1.0; m.depthWrite = true;
+          }
+        });
       }
     });
   }"""
@@ -244,6 +265,28 @@ NEW_AUTOFIT_FN = """  function autoFitAnatomyIfNeeded() {
     }
   }"""
 
+NEW_HIGHLIGHT_FN = """  function highlightSelectedMesh(mesh) {
+    if (prevHighlighted && prevHighlighted.material) {
+      const pm = Array.isArray(prevHighlighted.material) ? prevHighlighted.material[0] : prevHighlighted.material;
+      if (pm && pm.emissive && prevHighlighted.userData._origEmissive !== undefined) {
+        pm.emissive.setHex(prevHighlighted.userData._origEmissive);
+        pm.emissiveIntensity = prevHighlighted.userData._origEmissiveInt || 0;
+      }
+    }
+    prevHighlighted = mesh || null;
+    if (mesh && mesh.material) {
+      const mm = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+      if (mm && mm.emissive) {
+        if (mesh.userData._origEmissive === undefined) {
+          mesh.userData._origEmissive = mm.emissive.getHex();
+          mesh.userData._origEmissiveInt = mm.emissiveIntensity || 0;
+        }
+        mm.emissive.setHex(0x0ea5e9);
+        mm.emissiveIntensity = 0.55;
+      }
+    }
+  }"""
+
 
 def patch_engine_3d(path: str) -> None:
     if not os.path.exists(path):
@@ -263,11 +306,15 @@ def patch_engine_3d(path: str) -> None:
         code, count=1
     )
     code = re.sub(
+        r'renderer\.toneMappingExposure\s*=\s*[0-9.]+;',
+        'renderer.toneMappingExposure = 1.18;',
+        code, count=1
+    )
+    code = re.sub(
         r'const\s+clipPlaneZ\s*=\s*new\s+THREE\.Plane\([^)]+\)\s*,?\s*[^)]*\)\s*;',
         'const clipPlaneZ = new THREE.Plane(new THREE.Vector3(0, 0, -1), 2.5);',
         code, count=1
     )
-
     code = re.sub(
         r'visibleLayers:\s*\{[^}]+\}',
         "visibleLayers: { Skin: false, LigamentJoint: true, Muscular: true, Skeleton: true, Visceral: true, Neurovascular: true, Arterial: true, Venous: true, Nervous: true, Lymphatic: true, Points: true }",
@@ -280,12 +327,35 @@ def patch_engine_3d(path: str) -> None:
         ('upgradeBiologicalMaterial', NEW_UPGRADE_MAT_FN),
         ('applyLayerAndGenderStyles', NEW_APPLY_LAYERS_FN),
         ('autoFitAnatomyIfNeeded', NEW_AUTOFIT_FN),
+        ('highlightSelectedMesh', NEW_HIGHLIGHT_FN),
     ]:
         code, ok = replace_js_function(code, fn_name, new_fn)
         print(f"{path}: replace {fn_name} -> {'OK' if ok else 'NOT FOUND'}")
 
     with open(path, 'w', encoding='utf-8') as f:
         f.write(code)
+
+
+def patch_mobile_adapter(path: str) -> None:
+    if not os.path.exists(path):
+        print(f"Skip missing {path}")
+        return
+    with open(path, 'r', encoding='utf-8') as f:
+        js = f.read()
+
+    js = re.sub(
+        r'renderer\.setPixelRatio\([^;]+\);',
+        'renderer.setPixelRatio(isEco ? Math.min(window.devicePixelRatio || 1, 1.25) : Math.min(window.devicePixelRatio || 1, 2.0));',
+        js, count=1
+    )
+    js = re.sub(
+        r'const h = window\.innerHeight - 60;\s*camera\.aspect = window\.innerWidth / h;\s*camera\.updateProjectionMatrix\(\);\s*renderer\.setSize\(window\.innerWidth, h\);',
+        'const wrap = renderer.domElement.parentElement; const w = (wrap && wrap.clientWidth) || window.innerWidth; const h = (wrap && wrap.clientHeight) || (window.innerHeight - 60); camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix(); renderer.setSize(w, h);',
+        js, count=1
+    )
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(js)
+    print(f"{path}: optimized DPR cap & container-accurate resize")
 
 
 def patch_index_html(path: str) -> None:
@@ -308,9 +378,9 @@ def patch_index_html(path: str) -> None:
 
 
 if __name__ == '__main__':
-    for p in ['src/engine_3d.js']:
-        patch_engine_3d(p)
+    patch_engine_3d('src/engine_3d.js')
+    patch_mobile_adapter('src/mobile_adapter.js')
     for p in ['src/index.html', 'www/index.html']:
         patch_index_html(p)
-      
+
 # EOF
