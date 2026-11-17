@@ -41,7 +41,7 @@ jobs:
           path: |
             www/models
             www/data/ext_acupoints
-          key: models-v1-${{ hashFiles('scripts/split_z_anatomy_regions.py', 'scripts/build_micro_glbs.py') }}
+          key: models-v2-${{ hashFiles('scripts/split_z_anatomy_regions.py', 'scripts/build_micro_glbs.py') }}
 
       - name: Install Blender 4.2 LTS (Headless)
         if: steps.models-cache.outputs.cache-hit != 'true'
@@ -81,7 +81,7 @@ jobs:
           python3 -c 'p="scripts/split_z_anatomy_regions.py";t=open(p).read();s="index_file = os.path.join";c="for o in list(bpy.data.objects):\n    if o.type==\"MESH\" and o.data:\n        for pl in o.data.polygons: pl.use_smooth=True\n        if 200<=len(o.data.polygons)<=20000 and not o.name.startswith(\"Skin_\"):\n            try:\n                m=o.modifiers.new(name=\"Sub1\",type=\"SUBSURF\");m.levels=1;m.render_levels=1;bpy.context.view_layer.objects.active=o;bpy.ops.object.modifier_apply(modifier=m.name)\n            except Exception: o.modifiers.clear()\n\n";open(p,"w").write(t.replace(s,c+s,1))'
           blender --background "$BLEND_FILE" --python-exit-code 1 --python scripts/split_z_anatomy_regions.py -- www/models
           git clone --depth 1 https://huggingface.co/datasets/BoneHub/visible-human-3d-models /tmp/vh-bones || true
-          (cd /tmp/vh-bones && git lfs pull --include="*02_Female*/*.stl,*Female*/*.stl" || true)
+          (cd /tmp/vh-bones && git lfs install --local && git lfs pull --include="*Female*/*.stl,*female*/*.stl,*02*/*.stl" || true)
           blender --background --python-expr 'import os,bpy;from mathutils import Vector,Matrix;vr="/tmp/vh-bones";of="www/models/region_female_skeleton.glb";bpy.ops.wm.read_factory_settings(use_empty=True);stls=[os.path.join(r,f) for r,_,fs in os.walk(vr) for f in fs if f.lower().endswith(".stl") and "female" in r.lower()];[(bpy.ops.wm.stl_import(filepath=p) if hasattr(bpy.ops,"stl_import") else bpy.ops.import_mesh.stl(filepath=p)) for p in stls];os_=[o for o in bpy.data.objects if o.type=="MESH" and len(o.data.vertices)>0];mc=Vector((1e9,1e9,1e9));xc=Vector((-1e9,-1e9,-1e9));[[setattr(mc,"x",min(mc.x,(o.matrix_world@v.co).x)),setattr(mc,"y",min(mc.y,(o.matrix_world@v.co).y)),setattr(mc,"z",min(mc.z,(o.matrix_world@v.co).z)),setattr(xc,"x",max(xc.x,(o.matrix_world@v.co).x)),setattr(xc,"y",max(xc.y,(o.matrix_world@v.co).y)),setattr(xc,"z",max(xc.z,(o.matrix_world@v.co).z))] for v in o.data.vertices) for o in os_];h=max(xc.z-mc.z,0.001);nm=Matrix.Scale(1.64/h,4)@Matrix.Translation(Vector((-(mc.x+xc.x)/2,-(mc.y+xc.y)/2,-mc.z)));[(o.data.transform(nm@o.matrix_world),o.matrix_world.identity(),setattr(o,"name","Skeleton__Female__VH_"+o.name),[setattr(pl,"use_smooth",True) for pl in o.data.polygons]) for o in os_];os_ and bpy.ops.export_scene.gltf(filepath=of,export_format="GLB",export_yup=True,export_draco_mesh_compression_enable=False)' || true
           ls -lh www/models/*.glb
 
