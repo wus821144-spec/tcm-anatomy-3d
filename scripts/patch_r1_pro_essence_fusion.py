@@ -31,7 +31,7 @@ ESSENCE_JS = r"""
   ];
 
   let exploded = false;
-  window.addEventListener('DOMContentLoaded', () => {
+  function mountEssenceUI() {
     const btnExplode = document.getElementById('btn-explode');
     if (btnExplode && typeof anatomyGroup !== 'undefined') {
       btnExplode.addEventListener('click', () => {
@@ -89,7 +89,9 @@ ESSENCE_JS = r"""
         }
       });
     }
-  });
+  }
+  if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', mountEssenceUI);
+  else mountEssenceUI();
 })();
 """
 
