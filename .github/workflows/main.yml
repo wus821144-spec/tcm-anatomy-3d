@@ -28,7 +28,7 @@ jobs:
       - name: Setup Gradle Cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Clone Clean Open-Source Base (ashemag/human-atlas) & Merge TCM R2
+      - name: Clone Clean Open-Source Base (ashemag/human-atlas) & Deep Core Upgrade
         run: |
           rm -rf /tmp/atlas-r2
           git clone --depth 1 https://github.com/ashemag/human-atlas.git /tmp/atlas-r2
@@ -49,16 +49,61 @@ jobs:
           with open("/tmp/atlas-r2/public/data/tcm_bundle.json", "w", encoding="utf-8") as f:
               json.dump(bundle, f, ensure_ascii=False, separators=(",", ":"))
           '
+          cp r2/app/plugin-registry.ts /tmp/atlas-r2/app/plugin-registry.ts
           cp r2/app/tcm-panel.tsx /tmp/atlas-r2/app/tcm-panel.tsx
           cp r2/app/carbon-theme.css /tmp/atlas-r2/app/carbon-theme.css
           python3 -c '
           p = "/tmp/atlas-r2/app/globals.css"
           with open(p, "a", encoding="utf-8") as f:
               f.write("\n@import \"./carbon-theme.css\";\n")
+
+          sc = "/tmp/atlas-r2/app/scene.tsx"
+          st = open(sc, "r", encoding="utf-8").read()
+          st = st.replace("renderer.setClearColor('\''#f2f3f3'\'')", "renderer.setClearColor('\''#05070b'\'')")
+          st = st.replace("color:0xd5d9dc", "color:0x05070b")
+          st = st.replace("color:0xeeeeec", "color:0x0a1019")
+          st = st.replace("color:0x8c969f", "color:0xf59e0b")
+          st = st.replace("color:0xa4aeb8", "color:0x38bdf8")
+          st = st.replace("innerWidth<768?1.5:2", "2")
+          open(sc, "w", encoding="utf-8").write(st)
+
+          an = "/tmp/atlas-r2/app/anatomy.ts"
+          at = open(an, "r", encoding="utf-8").read()
+          for en, zh in [
+              ("name:'\''Skeleton'\''", "name:'\''骨骼系统'\''"),
+              ("name:'\''Muscles'\''", "name:'\''肌肉系统'\''"),
+              ("name:'\''Heart'\''", "name:'\''心脏'\''"),
+              ("name:'\''Sensory organs'\''", "name:'\''感觉器官'\''"),
+              ("name:'\''Arteries'\''", "name:'\''动脉系统'\''"),
+              ("name:'\''Veins'\''", "name:'\''静脉系统'\''"),
+              ("name:'\''Nervous system'\''", "name:'\''神经系统'\''"),
+              ("name:'\''Respiratory'\''", "name:'\''呼吸系统'\''"),
+              ("name:'\''Digestive'\''", "name:'\''消化系统'\''"),
+              ("name:'\''Urinary'\''", "name:'\''泌尿系统'\''"),
+              ("name:'\''Lymphatic'\''", "name:'\''淋巴系统'\''"),
+              ("name:'\''Endocrine'\''", "name:'\''内分泌系统'\''"),
+              ("name:'\''Reproductive'\''", "name:'\''生殖系统'\''"),
+              ("name:'\''Body surface'\''", "name:'\''体表皮肤'\''"),
+              ("name:'\''Connective tissue'\''", "name:'\''结缔组织'\''"),
+          ]:
+              at = at.replace(en, zh)
+          open(an, "w", encoding="utf-8").write(at)
+
           px = "/tmp/atlas-r2/app/page.tsx"
           s = open(px, "r", encoding="utf-8").read()
           s = "import { TcmOverlay } from '\''./tcm-panel'\'';\n" + s
           s = s.replace("<h1>Human Atlas", "<h1>中医解剖 3D")
+          s = s.replace("Find a structure", "搜索解剖结构")
+          s = s.replace(">Systems<", ">系统图层<")
+          s = s.replace(">All<", ">全部<")
+          s = s.replace(">Skeleton<", ">骨骼<")
+          s = s.replace(">Organs<", ">脏腑<")
+          s = s.replace(">Hide all<", ">全部隐藏<")
+          s = s.replace(">Explode anatomy<", ">爆炸分解<")
+          s = s.replace(">Reset<", ">重置<")
+          s = s.replace(">Isolate structure<", ">孤立观察<")
+          s = s.replace(">Show surrounding anatomy<", ">恢复周围结构<")
+          s = s.replace(">Clear selection<", ">清除选中<")
           s = s.replace("</main>;", "  <TcmOverlay onSelectAnatomy={() => {}} />\n  </main>;")
           open(px, "w", encoding="utf-8").write(s)
           '
