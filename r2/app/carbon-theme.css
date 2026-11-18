@@ -106,15 +106,15 @@ input, textarea { -webkit-user-select: text !important; user-select: text !impor
 }
 .tcm-modal-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(2, 4, 8, 0.65); display: flex; align-items: flex-end; justify-content: center; }
 .tcm-sheet { width: min(560px, 100%); max-height: 82dvh; border-radius: 24px 24px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; }
-.tcm-sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.tcm-sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;flex-shrink: 0 !important;  }
 .tcm-eyebrow { font-size: 10px; letter-spacing: 0.14em; color: var(--accent-hex); font-weight: 600; }
 .tcm-sheet-head h2 { margin: 4px 0 0; font-size: 18px; font-weight: 600; color: #f8fafc; }
 .tcm-close { width: 36px; height: 36px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.06); color: #cbd5e1; }
-.tcm-theme-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.tcm-theme-row { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0 !important; }
 .tcm-theme-pill { padding: 4px 10px; border-radius: 999px; font-size: 11px; border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; display: inline-flex; align-items: center; gap: 5px; }
 .tcm-theme-pill.active { border-color: var(--accent-hex); color: var(--accent-text); background: var(--accent-soft); }
 .tcm-theme-dot { width: 8px; height: 8px; border-radius: 50%; }
-.tcm-tabs { display: flex; overflow-x: auto; gap: 6px; background: rgba(15, 20, 30, 0.8); padding: 4px; border-radius: 12px; }
+.tcm-tabs { display: flex; overflow-x: auto; gap: 6px; background: rgba(15, 20, 30, 0.8); padding: 4px; border-radius: 12px;flex-shrink: 0 !important; min-height: 40px !important; align-items: center !important;  }
 .tcm-tabs button { display: inline-flex; align-items: center; justify-content: center; flex: 1 0 auto; white-space: nowrap; gap: 6px; padding: 8px 10px; border-radius: 9px; font-size: 12px; font-weight: 600; color: #8b9bb4; }
 .tcm-tabs button.active { background: var(--accent-hex); color: #05070b; }
 .tcm-body { overflow-y: auto; flex: 1; min-height: 0; }
@@ -149,4 +149,7 @@ select, .model-select select { background: rgba(8, 12, 19, 0.94) !important; col
 @media (max-width: 640px) { .view-controls { top: auto !important; bottom: max(92px, calc(env(safe-area-inset-bottom) + 84px)) !important; right: 12px !important; left: auto !important; transform: none !important; } }
 [role="listbox"], [data-slot="combobox-content"], [data-base-ui-portal] > div, .anatomy-search-results, .anatomy-search-results * { background: rgba(8, 12, 19, 0.96) !important; color: #f1f5f9 !important; }
 [role="option"]:hover, [data-highlighted] { background: rgba(14, 165, 233, 0.22) !important; }
-.language-switch { color: var(--r2-accent) !important; font-size: 12px !important; font-weight: 600 !important; width: auto !important; padding: 0 10px !important; }
+.language-switch { display: none !important; }
+.identity h1 { font-size: clamp(19px, 4.8vw, 26px) !important; max-width: calc(100vw - 118px) !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-slot="select-trigger"], .sex-switch, .identity button, .studio select { background: rgba(10, 14, 22, 0.92) !important; color: #f8fafc !important; border: 1px solid rgba(255, 255, 255, 0.14) !important; }
+
