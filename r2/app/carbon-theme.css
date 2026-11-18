@@ -143,3 +143,7 @@ input, textarea { -webkit-user-select: text !important; user-select: text !impor
 .tcm-item-detail { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
 .tcm-item-detail p { margin: 4px 0; font-size: 12px; color: #cbd5e1; line-height: 1.5; }
 .tcm-sec-title { margin: 6px 0 2px; font-size: 13px; color: var(--accent-hex); }
+.glass, .view-controls, .sex-switch, .model-select, .top-actions button, .bottom-dock, .layers-panel, .layers-panel.mobile-open, .search-panel, .anatomy-search-results, .detail-sheet, .about-sheet { background: rgba(8, 12, 19, 0.88) !important; border-color: rgba(255, 255, 255, 0.11) !important; color: #f1f5f9 !important; }
+select, .model-select select { background: rgba(8, 12, 19, 0.94) !important; color: #f1f5f9 !important; border-color: rgba(255, 255, 255, 0.14) !important; }
+.tcm-dock-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--accent-border); background: var(--accent-soft); color: var(--accent-text); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+@media (max-width: 640px) { .view-controls { top: auto !important; bottom: max(92px, calc(env(safe-area-inset-bottom) + 84px)) !important; right: 12px !important; left: auto !important; transform: none !important; } }
