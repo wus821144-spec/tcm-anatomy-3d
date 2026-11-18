@@ -151,85 +151,837 @@ export function MicroEarViewer() {
     </div>
   );
 }
+type CtPlane = 'axial' | 'sagittal' | 'coronal';
+type CtRegion = 'brain' | 'chest' | 'abdomen' | 'pelvis';
+type CtWindow = 'soft' | 'lung' | 'mediastinum' | 'bone';
 
+interface AtlasMeta {
+  title: string;
+  anatomy: string;
+  clinical: string;
+  landmarks: string[];
+}
+
+const PLANE_LABELS: Record<CtPlane, string> = {
+  axial: '轴位 Axial',
+  sagittal: '矢状位 Sagittal',
+  coronal: '冠状位 Coronal',
+};
+
+const REGION_LABELS: Record<CtRegion, string> = {
+  brain: '颅脑',
+  chest: '胸部',
+  abdomen: '腹部',
+  pelvis: '盆腔',
+};
+
+const WINDOW_STYLES: Record<
+  CtWindow,
+  { label: string; wl: string; bg: string; bone: string; soft: string; air: string; accent: string }
+> = {
+  soft: { label: '软组织窗', wl: 'W350 / L40', bg: '#070b14', bone: '#e2e8f0', soft: '#64748b', air: '#0b1220', accent: '#38bdf8' },
+  lung: { label: '肺窗', wl: 'W1500 / L-600', bg: '#03060c', bone: '#cbd5e1', soft: '#334155', air: '#020408', accent: '#22d3ee' },
+  mediastinum: { label: '纵隔窗', wl: 'W400 / L40', bg: '#090d16', bone: '#f1f5f9', soft: '#475569', air: '#060a12', accent: '#f59e0b' },
+  bone: { label: '骨窗', wl: 'W2000 / L500', bg: '#05070b', bone: '#ffffff', soft: '#1e293b', air: '#04060a', accent: '#a78bfa' },
+};
+function getAtlasMeta(region: CtRegion, plane: CtPlane, slicePos: number): AtlasMeta {
+  if (region === 'brain') {
+    if (plane === 'axial') {
+      if (slicePos > 20) {
+        return {
+          title: '颅脑轴位 · 半卵圆中心层面',
+          anatomy: '可见双侧大脑半球灰白质分界、大脑镰及上矢状窦截面。',
+          clinical: '读片要点：观察皮层沟回对称性及半卵圆中心有无缺血灶或占位。',
+          landmarks: ['大脑镰', '半卵圆中心', '上矢状窦', '颅骨板障'],
+        };
+      }
+      if (slicePos < -20) {
+        return {
+          title: '颅脑轴位 · 颅底脑桥小脑层面',
+          anatomy: '可见脑桥、第四脑室、双侧小脑半球、颞叶及蝶窦/乳突气房。',
+          clinical: '读片要点：骨窗重点排查颅底骨折与乳突炎；软组织窗看脑干及桥小脑角。',
+          landmarks: ['脑桥', '第四脑室', '小脑半球', '颞骨岩部'],
+        };
+      }
+      return {
+        title: '颅脑轴位 · 基底节与丘脑层面',
+        anatomy: '可见侧脑室前角/三角区、第三脑室、双侧丘脑、尾状核及豆状核。',
+        clinical: '读片要点：注意双侧基底节区对称性及中线结构是否居中，警惕高血压脑出血好发区。',
+        landmarks: ['侧脑室', '丘脑', '基底节', '中线大脑镰'],
+      };
+    }
+    if (plane === 'sagittal') {
+      return {
+        title: '颅脑矢状位 · 中线/旁矢状层面',
+        anatomy: '清晰显示胼胝体膝/体/压部、侧脑室/第三脑室、丘脑、脑干及小脑蚓部。',
+        clinical: '读片要点：评估胼胝体形态、垂体窝大小及小脑扁桃体下缘位置。',
+        landmarks: ['胼胝体', '丘脑', '侧脑室', '脑干与小脑'],
+      };
+    }
+    return {
+      title: '颅脑冠状位 · 丘脑与颞叶层面',
+      anatomy: '显示双侧大脑半球、侧脑室体部、第三脑室、丘脑、海马及颅顶穹窿。',
+      clinical: '读片要点：适合对比双侧颞叶海马对称性及观察大脑镰下疝征象。',
+      landmarks: ['侧脑室', '丘脑', '颞叶', '颅骨穹窿'],
+    };
+  }
+
+  if (region === 'chest') {
+    if (plane === 'axial') {
+      return {
+        title: slicePos > 15 ? '胸部轴位 · 主动脉弓上/气管层面' : '胸部轴位 · 心室与肺门层面',
+        anatomy: '双侧肺野充气透亮，纵隔内见心脏四腔/大血管影，后方为胸椎椎体与肋骨。',
+        clinical: '读片要点：肺窗排查肺结节、间质改变及肺气肿；纵隔窗观察心包积液与淋巴结。',
+        landmarks: ['双侧肺野', '心脏/纵隔', '胸主动脉', '胸椎与肋骨'],
+      };
+    }
+    if (plane === 'sagittal') {
+      return {
+        title: '胸部矢状位 · 纵隔与胸椎层面',
+        anatomy: '前为胸骨，中为心脏纵隔及肺血管分支，后为胸椎椎体及椎间盘序列。',
+        clinical: '读片要点：骨窗评估胸椎压缩性骨折；肺窗观察斜裂/水平裂及肺叶分段。',
+        landmarks: ['胸骨', '纵隔心脏', '肺野', '胸椎序列'],
+      };
+    }
+    return {
+      title: '胸部冠状位 · 气管隆突与双肺层面',
+      anatomy: '显示气管分叉及左右主支气管、双侧肺野纹理、纵隔心影及膈肌穹窿。',
+      clinical: '读片要点：气管隆突角度及支气管通畅度一目了然，便于定位肺门病变。',
+      landmarks: ['气管/主支气管', '双侧肺野', '纵隔心影', '膈肌'],
+    };
+  }
+
+  if (region === 'abdomen') {
+    if (plane === 'axial') {
+      return {
+        title: slicePos > 15 ? '腹部轴位 · 肝脾胃上腹层面' : '腹部轴位 · 肾门与腰椎层面',
+        anatomy: '右上腹为肝脏实质，左上腹为脾脏与胃泡，脊柱两侧为双肾及腰大肌。',
+        clinical: '读片要点：软组织窗对比肝脾密度（脂肪肝时肝密度低于脾），观察肾盂及腹主动脉钙化。',
+        landmarks: ['肝脏', '脾脏', '胃泡', '双肾/腰椎'],
+      };
+    }
+    if (plane === 'sagittal') {
+      return {
+        title: '腹部矢状位 · 腹主动脉与脊柱层面',
+        anatomy: '可见肝脏左叶、胃窦、胰腺断面、腹主动脉纵行走行及腰椎椎体。',
+        clinical: '读片要点：观察腹主动脉管径及腰椎椎体后缘骨质增生/椎管狭窄情况。',
+        landmarks: ['肝脏/胃', '腹主动脉', '腰椎', '腹壁'],
+      };
+    }
+    return {
+      title: '腹部冠状位 · 肝脾双肾全景层面',
+      anatomy: '右上腹肝脏、左上腹脾脏与胃、双侧肾脏及中轴腰椎结构完整呈像。',
+      clinical: '读片要点：便于评估肝脾大小、双肾位置高低及输尿管走行区结石。',
+      landmarks: ['肝脏', '脾脏', '双肾', '腰椎'],
+    };
+  }
+
+  if (plane === 'axial') {
+    return {
+      title: '盆腔轴位 · 膀胱子宫与骶骨层面',
+      anatomy: '前方为充盈膀胱，中后方为子宫（或前列腺）及直肠，后方为骶骨与双侧髂骨。',
+      clinical: '读片要点：观察膀胱壁光整度、子宫附件区占位及骨窗下骶髂关节/髋臼骨质。',
+      landmarks: ['膀胱', '子宫', '直肠', '骶骨/髂骨'],
+    };
+  }
+  if (plane === 'sagittal') {
+    return {
+      title: '盆腔矢状位 · 盆底正中矢状层面',
+      anatomy: '由前向后依次为耻骨联合、膀胱、子宫与宫颈、直肠及骶尾骨生理弧度。',
+      clinical: '读片要点：评估子宫前/后倾位、膀胱直肠间隙及骶尾骨骨折脱位。',
+      landmarks: ['耻骨联合', '膀胱', '子宫', '骶骨/直肠'],
+    };
+  }
+  return {
+    title: '盆腔冠状位 · 骨盆环与盆腔脏器层面',
+    anatomy: '双侧髂骨翼及髋臼构成骨盆环，中央可见膀胱、子宫及盆底肌群。',
+    clinical: '读片要点：骨窗重点检查骨盆环连续性与股骨头；软组织窗观察盆腔积液。',
+    landmarks: ['髂骨翼', '膀胱', '子宫', '骶骨'],
+  };
+}
+
+function drawMarker(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  lx: number,
+  ly: number,
+  label: string,
+  color: string
+) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(lx, ly);
+  ctx.stroke();
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.font = '10px system-ui, -apple-system, sans-serif';
+  const tw = ctx.measureText(label).width;
+  const padX = 4;
+  const boxX = lx >= x ? lx + 2 : lx - tw - padX * 2 - 2;
+  const boxY = ly - 7;
+  ctx.fillStyle = 'rgba(5, 10, 20, 0.85)';
+  ctx.fillRect(boxX, boxY, tw + padX * 2, 14);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 0.8;
+  ctx.strokeRect(boxX, boxY, tw + padX * 2, 14);
+  ctx.fillStyle = '#e2e8f0';
+  ctx.fillText(label, boxX + padX, boxY + 10.5);
+  ctx.restore();
+}
+function drawCtAtlas(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  region: CtRegion,
+  plane: CtPlane,
+  win: CtWindow,
+  slicePos: number
+) {
+  const st = WINDOW_STYLES[win];
+  const cx = w / 2;
+  const cy = h / 2;
+  const shift = slicePos * 0.28;
+  const scale = 1 - Math.abs(slicePos) * 0.0022;
+
+  ctx.fillStyle = st.bg;
+  ctx.fillRect(0, 0, w, h);
+
+  // Subtle diagnostic grid
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+  ctx.lineWidth = 1;
+  for (let gx = 20; gx < w; gx += 20) {
+    ctx.beginPath();
+    ctx.moveTo(gx, 0);
+    ctx.lineTo(gx, h);
+    ctx.stroke();
+  }
+  for (let gy = 20; gy < h; gy += 20) {
+    ctx.beginPath();
+    ctx.moveTo(0, gy);
+    ctx.lineTo(w, gy);
+    ctx.stroke();
+  }
+
+  ctx.save();
+  if (region === 'brain') {
+    if (plane === 'axial') {
+      const rx = 74 * scale;
+      const ry = 86 * scale;
+      // Skull outer & inner table
+      ctx.fillStyle = st.bone;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx + 7, ry + 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = win === 'bone' ? '#0f172a' : st.soft;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Falx cerebri
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.55)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - ry + 4);
+      ctx.lineTo(cx, cy + ry - 4);
+      ctx.stroke();
+
+      // Lateral ventricles & thalamus
+      const ventW = Math.max(6, 16 - Math.abs(slicePos) * 0.14);
+      ctx.fillStyle = st.air;
+      ctx.beginPath();
+      ctx.ellipse(cx - 14, cy - 12 + shift * 0.15, ventW * 0.55, 22, -0.22, 0, Math.PI * 2);
+      ctx.ellipse(cx + 14, cy - 12 + shift * 0.15, ventW * 0.55, 22, 0.22, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Thalamus
+      ctx.fillStyle = win === 'bone' ? '#1e293b' : '#94a3b8';
+      ctx.beginPath();
+      ctx.ellipse(cx - 15, cy + 12, 11, 15, 0.1, 0, Math.PI * 2);
+      ctx.ellipse(cx + 15, cy + 12, 11, 15, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawMarker(ctx, cx - 14, cy - 14, 48, 36, '侧脑室', st.accent);
+      drawMarker(ctx, cx + 15, cy + 12, 290, 128, '丘脑', '#fbbf24');
+      drawMarker(ctx, cx + rx + 3, cy - 30, 290, 56, '颅骨板障', '#f8fafc');
+    } else if (plane === 'sagittal') {
+      // Cranial vault
+      ctx.fillStyle = st.bone;
+      ctx.beginPath();
+      ctx.ellipse(cx + shift * 0.2, cy - 4, 88, 72, -0.05, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = win === 'bone' ? '#0f172a' : st.soft;
+      ctx.beginPath();
+      ctx.ellipse(cx + shift * 0.2, cy - 4, 80, 64, -0.05, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Corpus callosum
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(cx, cy - 2, 34, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.stroke();
+
+      // Ventricle & Thalamus
+      ctx.fillStyle = st.air;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 8, 22, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.ellipse(cx + 2, cy + 8, 16, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Brainstem & Cerebellum
+      ctx.fillStyle = win === 'bone' ? '#334155' : '#7c8ea6';
+      ctx.beginPath();
+      ctx.ellipse(cx + 4, cy + 36, 11, 22, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cx + 34, cy + 32, 22, 18, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawMarker(ctx, cx - 10, cy - 34, 58, 32, '胼胝体', st.accent);
+      drawMarker(ctx, cx + 2, cy + 8, 58, 118, '丘脑', '#fbbf24');
+      drawMarker(ctx, cx + 36, cy + 32, 286, 148, '小脑/脑干', '#34d399');
+    } else {
+      // Coronal brain
+      ctx.fillStyle = st.bone;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 4, 78 * scale, 74 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = win === 'bone' ? '#0f172a' : st.soft;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 4, 71 * scale, 67 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 60);
+      ctx.lineTo(cx, cy + 12);
+      ctx.stroke();
+
+      // Butterfly lateral ventricles
+      ctx.fillStyle = st.air;
+      ctx.beginPath();
+      ctx.ellipse(cx - 12, cy - 12, 10, 7, -0.4, 0, Math.PI * 2);
+      ctx.ellipse(cx + 12, cy - 12, 10, 7, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Thalami
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.ellipse(cx - 13, cy + 8, 11, 13, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + 13, cy + 8, 11, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawMarker(ctx, cx - 12, cy - 12, 52, 42, '侧脑室', st.accent);
+      drawMarker(ctx, cx + 13, cy + 8, 286, 115, '丘脑', '#fbbf24');
+      drawMarker(ctx, cx - 50, cy + 28, 52, 152, '颞叶', '#34d399');
+    }
+  } else if (region === 'chest') {
+    if (plane === 'axial') {
+      // Thoracic wall & ribs
+      ctx.strokeStyle = st.bone;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 104 * scale, 74 * scale, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = st.soft;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 99 * scale, 69 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lung fields
+      ctx.fillStyle = win === 'lung' ? '#040914' : st.air;
+      ctx.beginPath();
+      ctx.ellipse(cx - 42, cy + 2, 38 * scale, 50 * scale, 0.12, 0, Math.PI * 2);
+      ctx.ellipse(cx + 42, cy + 2, 38 * scale, 50 * scale, -0.12, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (win === 'lung') {
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx - 24, cy);
+        ctx.lineTo(cx - 64, cy - 22);
+        ctx.moveTo(cx - 24, cy + 4);
+        ctx.lineTo(cx - 60, cy + 26);
+        ctx.moveTo(cx + 24, cy);
+        ctx.lineTo(cx + 64, cy - 22);
+        ctx.moveTo(cx + 24, cy + 4);
+        ctx.lineTo(cx + 60, cy + 26);
+        ctx.stroke();
+      }
+
+      // Heart & mediastinum
+      ctx.fillStyle = win === 'mediastinum' ? '#94a3b8' : '#64748b';
+      ctx.beginPath();
+      ctx.ellipse(cx + 8, cy - 10 + shift * 0.15, 25, 30, -0.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Thoracic vertebra
+      ctx.fillStyle = st.bone;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 54, 14, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawMarker(ctx, cx - 44, cy - 10, 44, 38, '肺野', st.accent);
+      drawMarker(ctx, cx + 10, cy - 12, 286, 44, '心脏/纵隔', '#f59e0b');
+      drawMarker(ctx, cx, cy + 54, 286, 166, '胸椎', '#f8fafc');
+    } else if (plane === 'sagittal') {
+      // Chest wall & lung
+      ctx.fillStyle = st.air;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 66, 78, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = st.bone;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Sternum (anterior) & Thoracic spine (posterior)
+      ctx.fillStyle = st.bone;
+      ctx.fillRect(cx - 64, cy - 52, 8, 86);
+      for (let i = 0; i < 6; i++) {
+        ctx.fillRect(cx + 46, cy - 62 + i * 22, 14, 16);
+      }
+
+      // Heart shadow
+      ctx.fillStyle = win === 'mediastinum' ? '#94a3b8' : '#475569';
+      ctx.beginPath();
+      ctx.ellipse(cx - 20, cy + 16, 28, 32, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawMarker(ctx, cx - 60, cy - 16, 48, 48, '胸骨', '#f8fafc');
+      drawMarker(ctx, cx - 18, cy + 16, 48, 138, '纵隔心脏', '#f59e0b');
+      drawMarker(ctx, cx + 52, cy - 20, 290, 72, '胸椎序列', st.accent);
+    } else {
+      // Coronal chest
+      ctx.fillStyle = st.air;
+      ctx.beginPath();
+      ctx.ellipse(cx - 42, cy + 4, 36, 66, 0.08, 0, Math.PI * 2);
+      ctx.ellipse(cx + 42, cy + 4, 36, 66, -0.08, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = st.bone;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Trachea & carina
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 72);
+      ctx.lineTo(cx, cy - 24);
+      ctx.lineTo(cx - 24, cy - 6);
+      ctx.moveTo(cx, cy - 24);
+      ctx.lineTo(cx + 24, cy - 6);
+      ctx.stroke();
+
+      // Heart
+      ctx.fillStyle = win === 'mediastinum' ? '#94a3b8' : '#64748b';
+      ctx.beginPath();
+      ctx.ellipse(cx + 12, cy + 28, 28, 34, -0.15, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawMarker(ctx, cx, cy - 42, 48, 36, '气管/隆突', st.accent);
+      drawMarker(ctx, cx - 44, cy + 6, 48, 128, '左/右肺野', '#22d3ee');
+      drawMarker(ctx, cx + 14, cy + 28, 288, 142, '心脏纵隔', '#f59e0b');
+    }
+  } else if (region === 'abdomen') {
+    if (plane === 'axial') {
+      ctx.fillStyle = st.soft;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 102 * scale, 72 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = st.bone;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Liver (patient right = screen left)
+      ctx.fillStyle = '#7c8ea6';
+      ctx.beginPath();
+      ctx.ellipse(cx - 46, cy - 8, 36, 42, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Stomach (anterior left) & Spleen (posterior left)
+      ctx.fillStyle = st.air;
+      ctx.beginPath();
+      ctx.ellipse(cx + 26, cy - 24, 22, 15, 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath();
+      ctx.ellipse(cx + 66, cy + 6, 18, 26, 0.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Kidneys & Lumbar spine
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.ellipse(cx - 32, cy + 30, 15, 19, 0.2, 0, Math.PI * 2);
+      ctx.ellipse(cx + 32, cy + 30, 15, 19, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = st.bone;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 44, 15, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawMarker(ctx, cx - 50, cy - 12, 42, 34, '肝脏', st.accent);
+      drawMarker(ctx, cx + 26, cy - 24, 288, 34, '胃泡', '#34d399');
+      drawMarker(ctx, cx + 68, cy + 8, 288, 92, '脾脏', '#f59e0b');
+      drawMarker(ctx, cx + 32, cy + 30, 288, 156, '双肾/腰椎', '#a78bfa');
+    } else if (plane === 'sagittal') {
+      ctx.fillStyle = st.soft;
+      ctx.fillRect(cx - 70, cy - 76, 140, 152);
+      ctx.strokeStyle = 'rgba(148,163,184,0.4)';
+      ctx.strokeRect(cx - 70, cy - 76, 140, 152);
+
+      // Liver/stomach anterior
+      ctx.fillStyle = '#7c8ea6';
+      ctx.beginPath();
+      ctx.ellipse(cx - 26, cy - 26, 28, 32, 0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Abdominal aorta
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(cx + 12, cy - 70);
+      ctx.lineTo(cx + 12, cy + 68);
+      ctx.stroke();
+
+      // Lumbar vertebrae
+      ctx.fillStyle = st.bone;
+      for (let i = 0; i < 5; i++) {
+        ctx.fillRect(cx + 34, cy - 66 + i * 28, 20, 20);
+      }
+
+      drawMarker(ctx, cx - 26, cy - 26, 46, 44, '肝脏/胃', st.accent);
+      drawMarker(ctx, cx + 12, cy + 8, 46, 132, '腹主动脉', '#ef4444');
+      drawMarker(ctx, cx + 44, cy - 10, 290, 82, '腰椎序列', '#f8fafc');
+    } else {
+      // Coronal abdomen
+      ctx.fillStyle = st.soft;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 86, 80, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Liver (screen left) & Spleen (screen right)
+      ctx.fillStyle = '#7c8ea6';
+      ctx.beginPath();
+      ctx.ellipse(cx - 42, cy - 28, 32, 34, 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath();
+      ctx.ellipse(cx + 48, cy - 30, 20, 26, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Kidneys
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.ellipse(cx - 34, cy + 24, 15, 24, 0.1, 0, Math.PI * 2);
+      ctx.ellipse(cx + 34, cy + 18, 15, 24, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lumbar spine
+      ctx.fillStyle = st.bone;
+      for (let i = 0; i < 5; i++) {
+        ctx.fillRect(cx - 11, cy - 60 + i * 26, 22, 18);
+      }
+
+      drawMarker(ctx, cx - 44, cy - 28, 46, 36, '肝脏', st.accent);
+      drawMarker(ctx, cx + 48, cy - 30, 290, 36, '脾脏', '#f59e0b');
+      drawMarker(ctx, cx + 34, cy + 20, 290, 140, '双肾/腰椎', '#a78bfa');
+    }
+  } else {
+    // Pelvis
+    if (plane === 'axial') {
+      ctx.fillStyle = st.soft;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 98 * scale, 68 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Iliac bones
+      ctx.strokeStyle = st.bone;
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.arc(cx - 46, cy + 6, 40, Math.PI * 0.65, Math.PI * 1.45);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx + 46, cy + 6, 40, -Math.PI * 0.45, Math.PI * 0.35);
+      ctx.stroke();
+
+      // Sacrum
+      ctx.fillStyle = st.bone;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 46, 24, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bladder (anterior), Uterus (middle), Rectum (posterior)
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 28, 28, 16, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 2, 18, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = st.air;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 24, 12, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawMarker(ctx, cx, cy - 28, 46, 36, '膀胱', st.accent);
+      drawMarker(ctx, cx, cy + 2, 288, 86, '子宫', '#f472b6');
+      drawMarker(ctx, cx, cy + 46, 288, 160, '骶骨/直肠', '#f8fafc');
+    } else if (plane === 'sagittal') {
+      ctx.fillStyle = st.soft;
+      ctx.fillRect(cx - 72, cy - 72, 144, 144);
+
+      // Pubic symphysis
+      ctx.fillStyle = st.bone;
+      ctx.beginPath();
+      ctx.ellipse(cx - 48, cy + 16, 9, 18, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sacrum curve
+      ctx.strokeStyle = st.bone;
+      ctx.lineWidth = 9;
+      ctx.beginPath();
+      ctx.arc(cx + 24, cy + 4, 42, -0.4, 1.2);
+      ctx.stroke();
+
+      // Bladder, Uterus, Rectum
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.ellipse(cx - 26, cy + 4, 18, 20, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.ellipse(cx + 4, cy - 8, 20, 12, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawMarker(ctx, cx - 26, cy + 4, 46, 52, '膀胱', st.accent);
+      drawMarker(ctx, cx + 4, cy - 8, 288, 52, '子宫', '#f472b6');
+      drawMarker(ctx, cx + 58, cy + 24, 288, 142, '骶尾骨', '#f8fafc');
+    } else {
+      // Coronal pelvis
+      ctx.strokeStyle = st.bone;
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 4, 78, 56, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 18, 28, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 12, 20, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawMarker(ctx, cx - 74, cy - 14, 46, 42, '髂骨翼', '#f8fafc');
+      drawMarker(ctx, cx, cy - 12, 288, 54, '子宫', '#f472b6');
+      drawMarker(ctx, cx, cy + 18, 288, 138, '膀胱', st.accent);
+    }
+  }
+  ctx.restore();
+
+  // Orientation labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+  const orient =
+    plane === 'axial'
+      ? { top: 'A', bottom: 'P', left: 'R', right: 'L' }
+      : plane === 'sagittal'
+      ? { top: 'S', bottom: 'I', left: 'A', right: 'P' }
+      : { top: 'S', bottom: 'I', left: 'R', right: 'L' };
+  ctx.fillText(orient.top, cx - 4, 13);
+  ctx.fillText(orient.bottom, cx - 4, h - 6);
+  ctx.fillText(orient.left, 7, cy + 3);
+  ctx.fillText(orient.right, w - 15, cy + 3);
+
+  // HUD metadata
+  ctx.fillStyle = st.accent;
+  ctx.font = '10px ui-monospace, SFMono-Regular, monospace';
+  ctx.fillText(`${REGION_LABELS[region]} · ${PLANE_LABELS[plane]}`, 8, 14);
+  ctx.fillText(`${st.label} (${st.wl}) | Z:${slicePos}mm`, 8, h - 7);
+                  }
 export function CtAndNotesPanel() {
-  const [zPos, setZPos] = useState(0);
-  const [note, setNote] = useState(() => {
-    try { return localStorage.getItem('anatomy_r1_notes') || ''; } catch { return ''; }
-  });
-  const cvRef = useRef<HTMLCanvasElement>(null);
+  const [plane, setPlane] = useState<CtPlane>('axial');
+  const [region, setRegion] = useState<CtRegion>('brain');
+  const [win, setWin] = useState<CtWindow>('soft');
+  const [slicePos, setSlicePos] = useState<number>(0);
+  const [notes, setNotes] = useState<string>('');
+  const [savedTip, setSavedTip] = useState<string>('');
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    const cv = cvRef.current;
-    if (!cv) return;
-    const ctx = cv.getContext('2d');
-    if (!ctx) return;
-    ctx.fillStyle = '#05070b';
-    ctx.fillRect(0, 0, 280, 140);
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.ellipse(140, 70, 96, 54, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fillStyle = '#ebe2ce';
-    ctx.beginPath();
-    ctx.arc(140, 108, 12, 0, Math.PI * 2);
-    ctx.fill();
-    if (zPos > 30) {
-      ctx.fillStyle = '#fbcfe8';
-      ctx.beginPath();
-      ctx.ellipse(140, 68, 52, 38, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (zPos >= -20) {
-      ctx.fillStyle = 'rgba(253,164,175,0.45)';
-      ctx.beginPath();
-      ctx.ellipse(90, 68, 28, 34, 0, 0, Math.PI * 2);
-      ctx.ellipse(190, 68, 28, 34, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#dc2626';
-      ctx.beginPath();
-      ctx.arc(152, 64, 18, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      ctx.fillStyle = '#7c2d12';
-      ctx.beginPath();
-      ctx.ellipse(95, 62, 34, 24, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#d97706';
-      ctx.beginPath();
-      ctx.ellipse(175, 68, 28, 20, 0, 0, Math.PI * 2);
-      ctx.fill();
+    try {
+      setNotes(localStorage.getItem('anatomy_r1_notes') || '');
+    } catch {
+      setNotes('');
     }
-    ctx.fillStyle = '#f59e0b';
-    ctx.font = '11px sans-serif';
-    ctx.fillText(zPos > 30 ? '颅脑横断面 (CT/MRI)' : zPos >= -20 ? '胸部纵隔/肺窗 (CT)' : '上腹部肝胃肾层面 (CT)', 10, 18);
-  }, [zPos]);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    drawCtAtlas(ctx, canvas.width, canvas.height, region, plane, win, slicePos);
+  }, [region, plane, win, slicePos]);
+
+  const meta = getAtlasMeta(region, plane, slicePos);
+
+  const saveNotes = () => {
+    try {
+      localStorage.setItem('anatomy_r1_notes', notes);
+      setSavedTip('已保存至本地浏览器');
+      setTimeout(() => setSavedTip(''), 2000);
+    } catch {
+      setSavedTip('保存失败');
+    }
+  };
 
   return (
     <div className="tcm-stack">
       <div className="tcm-item-card static">
-        <strong>CT / MRI 横断面影像对照</strong>
-        <canvas ref={cvRef} width={280} height={140} style={{ width: '100%', borderRadius: 10, marginTop: 8 }} />
-        <input
-          type="range"
-          min={-60}
-          max={60}
-          value={zPos}
-          onChange={(e) => setZPos(Number(e.target.value))}
-          style={{ width: '100%', marginTop: 6 }}
+        <div className="tcm-item-head">
+          <strong>CT/MRI 多平面断层图谱浏览器</strong>
+          <span style={{ fontSize: 11, color: '#38bdf8' }}>{WINDOW_STYLES[win].wl}</span>
+        </div>
+
+        <div className="tcm-chip-row" style={{ marginTop: 8 }}>
+          {(Object.keys(PLANE_LABELS) as CtPlane[]).map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={plane === p ? 'active' : ''}
+              onClick={() => setPlane(p)}
+            >
+              {PLANE_LABELS[p]}
+            </button>
+          ))}
+        </div>
+
+        <div className="tcm-chip-row" style={{ marginTop: 6 }}>
+          {(Object.keys(REGION_LABELS) as CtRegion[]).map((r) => (
+            <button
+              key={r}
+              type="button"
+              className={region === r ? 'active' : ''}
+              onClick={() => setRegion(r)}
+            >
+              {REGION_LABELS[r]}
+            </button>
+          ))}
+        </div>
+
+        <div className="tcm-chip-row" style={{ marginTop: 6 }}>
+          {(Object.keys(WINDOW_STYLES) as CtWindow[]).map((wKey) => (
+            <button
+              key={wKey}
+              type="button"
+              className={win === wKey ? 'active' : ''}
+              onClick={() => setWin(wKey)}
+            >
+              {WINDOW_STYLES[wKey].label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 8 }}>
+          <label style={{ fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
+            <span>断层位置调节 (Z-Slice)</span>
+            <span>{slicePos} mm</span>
+          </label>
+          <input
+            type="range"
+            min={-60}
+            max={60}
+            step={2}
+            value={slicePos}
+            onChange={(e) => setSlicePos(Number(e.target.value))}
+            style={{ width: '100%', accentColor: '#38bdf8' }}
+          />
+        </div>
+
+        <canvas
+          ref={canvasRef}
+          width={340}
+          height={210}
+          style={{ width: '100%', borderRadius: 10, marginTop: 8, background: '#05080f' }}
         />
+
+        <div style={{ marginTop: 8, fontSize: 12, lineHeight: 1.5 }}>
+          <div style={{ fontWeight: 600, color: '#e2e8f0' }}>{meta.title}</div>
+          <div style={{ color: '#cbd5e1', marginTop: 4 }}>{meta.anatomy}</div>
+          <div style={{ color: '#38bdf8', marginTop: 4 }}>{meta.clinical}</div>
+          <div className="tcm-chip-row" style={{ marginTop: 6 }}>
+            {meta.landmarks.map((lm) => (
+              <span
+                key={lm}
+                style={{
+                  fontSize: 11,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  background: 'rgba(56, 189, 248, 0.14)',
+                  color: '#7dd3fc',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                }}
+              >
+                {lm}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
+
       <div className="tcm-item-card static">
-        <strong>离线临床学习笔记（自动本地保存）</strong>
+        <div className="tcm-item-head">
+          <strong>离线本地学习笔记</strong>
+          {savedTip && <span style={{ fontSize: 11, color: '#34d399' }}>{savedTip}</span>}
+        </div>
         <textarea
-          value={note}
-          onChange={(e) => {
-            setNote(e.target.value);
-            try { localStorage.setItem('anatomy_r1_notes', e.target.value); } catch {}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="记录经络/解剖/CT读片要点（自动持久化于 localStorage）..."
+          rows={4}
+          style={{
+            width: '100%',
+            marginTop: 8,
+            padding: 8,
+            borderRadius: 8,
+            background: '#0b1220',
+            color: '#e2e8f0',
+            border: '1px solid #334155',
+            fontSize: 12,
+            resize: 'vertical',
           }}
-          placeholder="记录穴位取穴心得、解剖毗邻或护理要点（纯离线保存在本机）..."
-          style={{ width: '100%', minHeight: 96, marginTop: 8, padding: 8, borderRadius: 10, background: '#05070b', color: '#f1f5f9', border: '1px solid rgba(255,255,255,0.12)', fontSize: 12 }}
         />
+        <button
+          type="button"
+          className="tcm-btn"
+          style={{ marginTop: 8, width: '100%' }}
+          onClick={saveNotes}
+        >
+          保存笔记到本地
+        </button>
       </div>
     </div>
   );
