@@ -224,7 +224,7 @@ cursor: 'pointer',
 }}
 >
 打开所属经脉与全穴位表
-</button
+</button>
 <button
   type="button"
   onClick={() => onToggleNeedleXray?.(!needleXray)}
