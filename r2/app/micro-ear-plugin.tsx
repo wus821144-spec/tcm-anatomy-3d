@@ -25,7 +25,7 @@ const EAR_ACUPOINTS: Array<{ name: string; region: string; pos: [number, number,
   { name: '肾', region: '耳甲艇', pos: [-0.03, 0.11, 0.048], color: 0x10b981, location: '对耳轮下脚下方后部（耳甲艇顶部）', indications: '腰膝酸软、耳鸣耳聋、水肿、遗精阳痿、脱发健忘' },
   { name: '内分泌', region: '屏间切迹', pos: [-0.11, -0.14, 0.055], color: 0xec4899, location: '耳甲腔底部屏间切迹内（近耳屏下缘）', indications: '内分泌失调、更年期综合征、痛经、痤疮及代谢调节' },
   { name: '降压沟', region: '耳背', pos: [0.07, 0.04, -0.075], color: 0x60a5fa, location: '耳廓背面由内上方斜向外下方的凹沟', indications: '原发性高血压、肝阳上亢型头痛眩晕、耳鸣' },
-];] // ;
+];
 
 export function MicroEarViewer() {
 const [selectedEarPt, setSelectedEarPt] = useState<string>('神门');
