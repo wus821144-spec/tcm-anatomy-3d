@@ -127,7 +127,8 @@ onClearTappedPoint3D
       })
       .catch(() => {});
   }, []);
-
+  useEffect(() => { const onOpen = () => setOpen((v) => !v); window.addEventListener('r2-open-tcm', onOpen); return () => window.removeEventListener('r2-open-tcm', onOpen); }, []);
+  
   const currentZiwu = useMemo(() => {
     const h = new Date().getHours();
     return ZIWU_TABLE.find((z) => z.hours.includes(h)) || ZIWU_TABLE[0];
@@ -158,10 +159,7 @@ onClearTappedPoint3D
 
   return (
     <>
-      <button type="button" className="tcm-fab glass" onClick={() => setOpen((v) => !v)} aria-label="打开中医经络与子午流注">
-        <Compass size={15} />
-        <span>中医 · {currentZiwu.shichen.split(' ')[0]}</span>
-      </button>
+
 
 {!open && tappedPoint3D && (
 <div
