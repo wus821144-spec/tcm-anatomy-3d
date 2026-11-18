@@ -147,3 +147,6 @@ input, textarea { -webkit-user-select: text !important; user-select: text !impor
 select, .model-select select { background: rgba(8, 12, 19, 0.94) !important; color: #f1f5f9 !important; border-color: rgba(255, 255, 255, 0.14) !important; }
 .tcm-dock-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--accent-border); background: var(--accent-soft); color: var(--accent-text); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 @media (max-width: 640px) { .view-controls { top: auto !important; bottom: max(92px, calc(env(safe-area-inset-bottom) + 84px)) !important; right: 12px !important; left: auto !important; transform: none !important; } }
+[role="listbox"], [data-slot="combobox-content"], [data-base-ui-portal] > div, .anatomy-search-results, .anatomy-search-results * { background: rgba(8, 12, 19, 0.96) !important; color: #f1f5f9 !important; }
+[role="option"]:hover, [data-highlighted] { background: rgba(14, 165, 233, 0.22) !important; }
+.language-switch { color: var(--r2-accent) !important; font-size: 12px !important; font-weight: 600 !important; width: auto !important; padding: 0 10px !important; }
