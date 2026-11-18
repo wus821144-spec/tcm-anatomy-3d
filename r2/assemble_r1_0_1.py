@@ -58,8 +58,7 @@ with open(f"{ATLAS_DIR}/public/data/zh_dict.json", "w", encoding="utf-8") as f:
 for fn in ["plugin-registry.ts", "bilingual-dict.ts", "micro-ear-plugin.tsx", "tcm-panel.tsx", "carbon-theme.css"]:
     shutil.copyfile(f"r2/app/{fn}", f"{ATLAS_DIR}/app/{fn}")
 
-gc_p = f"{ATLAS_DIR}/app/globals.css"; gc_s = open(gc_p, "r", encoding="utf-8").read(); open(gc_p, "w", encoding="utf-8").write("@import './carbon-theme.css';
-" + gc_s) if "carbon-theme.css" not in gc_s else None
+gc_p = f"{ATLAS_DIR}/app/globals.css"; gc_s = open(gc_p, "r", encoding="utf-8").read(); open(gc_p, "w", encoding="utf-8").write("@import './carbon-theme.css';" + chr(10) + gc_s.replace("@import './carbon-theme.css';", ""))
     f.write('\n@import "./carbon-theme.css";\n')
 
 an = f"{ATLAS_DIR}/app/anatomy.ts"
