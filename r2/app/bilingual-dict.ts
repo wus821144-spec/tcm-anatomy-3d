@@ -5,6 +5,41 @@ const ANATOMY_ROOT_ZH: Array<[RegExp, string]> = [
   [/^vh_m_/i, '男性'],
   [/\bleft\b/i, '左'],
   [/\bright\b/i, '右'],
+[/\bfirst\b/i, '第1'],
+[/\bsecond\b/i, '第2'],
+[/\bthird\b/i, '第3'],
+[/\bfourth\b/i, '第4'],
+[/\bfifth\b/i, '第5'],
+[/\bmetatarsal\s+bone\b/i, '跖骨'],
+[/\bmetacarpal\s+bone\b/i, '掌骨'],
+[/\bstyloid\s+process\b/i, '茎突'],
+[/\bcoracoid\s+process\b/i, '喙突'],
+[/\bspinous\s+process\b/i, '棘突'],
+[/\btransverse\s+process\b/i, '横突'],
+[/\bmastoid\s+process\b/i, '乳突'],
+[/\bacromion\b/i, '肩峰'],
+[/\bolecranon\b/i, '鹰嘴'],
+[/\bepicondyle\b/i, '上髁'],
+[/\bcondyle\b/i, '髁'],
+[/\btrochanter\b/i, '转子'],
+[/\btuberosity\b/i, '粗隆'],
+[/\btubercle\b/i, '结节'],
+[/\bforamen\b/i, '孔'],
+[/\bfossa\b/i, '窝'],
+[/\bsulcus\b/i, '沟'],
+[/\bgroove\b/i, '沟'],
+[/\bcrest\b/i, '嵴'],
+[/\bnotch\b/i, '切迹'],
+[/\bcanal\b/i, '管'],
+[/\bmeatus\b/i, '道'],
+[/\bfacet\b/i, '关节面'],
+[/\blamina\b/i, '椎板'],
+[/\bpedicle\b/i, '椎弓根'],
+[/\bprocess\b/i, '突'],
+[/\bhead\s+of\b/i, '头'],
+[/\bneck\s+of\b/i, '颈'],
+[/\bshaft\s+of\b/i, '干'],
+[/\bbody\s+of\b/i, '体'],
   [/\banterior\b/i, '前'],
   [/\bposterior\b/i, '后'],
   [/\bmedial\b/i, '内侧'],
@@ -171,11 +206,12 @@ export function lookupZhName(enName: string, dict: BilingualMap): string {
   const parts: string[] = [];
   if (/^vh_f_/i.test(raw)) parts.push('女性');
   else if (/^vh_m_/i.test(raw)) parts.push('男性');
-
+  let remaining = normalized;
   for (const [pattern, zh] of ANATOMY_ROOT_ZH) {
     if (pattern.source.startsWith('^vh_')) continue;
-    if (pattern.test(normalized) && !parts.includes(zh)) {
+    if (pattern.test(remaining) && (pattern.test(normalized) && !parts.includes(zh))) {
       parts.push(zh);
+remaining = remaining.replace(new RegExp(pattern.source, 'ig'), ' ');
     }
   }
 
