@@ -56,18 +56,21 @@ jobs:
           npx cap sync android
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
-          APK_RAW=app/build/outputs/apk/debug/app-debug.apk
+          ./gradlew assembleRelease 
+          APK_RAW=app/build/outputs/apk/release/app-release-unsigned.apk
+          APK_OUT=app/build/outputs/apk/release/Anatomy-R1-1.0.1.apk
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
           keytool -genkeypair -v -keystore /tmp/tcm_release.jks -alias tcm3d -keyalg RSA -keysize 2048 -validity 10000 -storepass tcm3dpass -keypass tcm3dpass -dname "CN=Anatomy R1-1.0.1, OU=Medical, O=OpenSource, L=Beijing, S=BJ, C=CN"
           "$BUILD_TOOLS/zipalign" -f -p 4 "$APK_RAW" /tmp/app-aligned.apk
-          "$BUILD_TOOLS/apksigner" sign --ks /tmp/tcm_release.jks --ks-key-alias tcm3d --ks-pass pass:tcm3dpass --key-pass pass:tcm3dpass --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out "$APK_RAW" /tmp/app-aligned.apk
-          "$BUILD_TOOLS/apksigner" verify --verbose "$APK_RAW"
-          ls -lh "$APK_RAW"
+          "$BUILD_TOOLS/apksigner" sign --min-sdk-version 21  --ks /tmp/tcm_release.jks --ks-key-alias tcm3d --ks-pass pass:tcm3dpass --key-pass pass:tcm3dpass --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out "$APK_OUT" /tmp/app-aligned.apk
+          "$BUILD_TOOLS/apksigner" verify --verbose "$APK_OUT" | tee /tmp/verify.log
+          grep -E "Verified using v[123] scheme" /tmp/verify.log
+          grep -q "v1 scheme.*: true" /tmp/verify.log && grep -q "v2 scheme.*: true" /tmp/verify.log && grep -q "v3 scheme.*: true" /tmp/verify.log && echo "v1=true, v2=true, v3=true verified"
+          ls -lh "$APK_OUT"
 
       - name: Upload Signed Anatomy R1-1.0.1 APK
         uses: actions/upload-artifact@v4
         with:
           name: Anatomy-R1-1.0.1-apk
-          path: /tmp/atlas-r2/android/app/build/outputs/apk/debug/app-debug.apk
+          path: /tmp/atlas-r2/android/app/build/outputs/apk/release/Anatomy-R1-1.0.1.apk
           compression-level: 0
