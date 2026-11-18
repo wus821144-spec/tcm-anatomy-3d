@@ -125,6 +125,23 @@ const ANATOMY_ROOT_ZH: Array<[RegExp, string]> = [
 [/\bsplenic\b/i, '脾'],
 [/\bcoronary\b/i, '冠状'],
 [/\bpulmonary\b/i, '肺'],
+  [/\bpudendal\b/i, '阴部'],
+  [/\blevator\s+ani\b/i, '肛提肌'],
+  [/\bcoccygeus\b/i, '尾骨肌'],
+  [/\bperineal\b/i, '会阴'],
+  [/\bbroad\s+ligament\b/i, '阔韧带'],
+  [/\bround\s+ligament\b/i, '圆韧带'],
+  [/\bendometrium\b/i, '子宫内膜'],
+  [/\bmyometrium\b/i, '子宫肌层'],
+  [/\bcervix\b/i, '宫颈'],
+  [/\bclitoris\b/i, '阴蒂'],
+  [/\blabia\b/i, '阴唇'],
+  [/\bareola\b/i, '乳晕'],
+  [/\blactiferous\b/i, '输乳'],
+  [/\bthenar\b/i, '大鱼际'],
+  [/\bhypothenar\b/i, '小鱼际'],
+  [/\blumbrical\b/i, '蚓状肌'],
+  [/\binterosseous\b/i, '骨间肌'],
 ];
 
 export async function loadBilingualDict(): Promise<BilingualMap> {
