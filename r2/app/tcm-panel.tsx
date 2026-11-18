@@ -95,6 +95,8 @@ interface TcmOverlayProps {
   onSelectMeridian3D?: (meridian: string) => void; onFocusPoint3D?: (pt: Point3D) => void;
 tappedPoint3D?: Point3D | null;
 onClearTappedPoint3D?: () => void;
+  needleXray?: boolean;
+  onToggleNeedleXray?: (next: boolean) => void;
 }
 
 export function TcmOverlay({
@@ -103,7 +105,9 @@ export function TcmOverlay({
   onPointsLoaded,
   onSelectMeridian3D, onFocusPoint3D,
 tappedPoint3D,
-onClearTappedPoint3D
+onClearTappedPoint3D,
+  needleXray = false,
+  onToggleNeedleXray
 }: TcmOverlayProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'ziwu' | 'points' | 'meridians' | 'rx' | 'micro' | 'notes'>('ziwu');
@@ -112,6 +116,8 @@ onClearTappedPoint3D
   const [query, setQuery] = useState('');
   const [meridianFilter, setMeridianFilter] = useState('全部');
   const [expandedPoint, setExpandedPoint] = useState<string | null>(null);
+  const [quizPt, setQuizPt] = useState<Point3D | null>(null);
+  const [quizReveal, setQuizReveal] = useState(false);
 
   useEffect(() => { applyCarbonAccent(accent); }, [accent]);
 
@@ -218,7 +224,20 @@ cursor: 'pointer',
 }}
 >
 打开所属经脉与全穴位表
-</button>
+</button
+<button
+  type="button"
+  onClick={() => onToggleNeedleXray?.(!needleXray)}
+  style={{
+    width: '100%',
+    marginTop: 6,
+    padding: '8px 12px',
+    borderRadius: 8,
+    cursor: 'pointer',
+  }}
+>
+  {needleXray ? '退出针刺透视' : '开启针刺透视'}
+</button>>
 </div>
 )}
       {open && (
@@ -244,6 +263,11 @@ cursor: 'pointer',
               {onTogglePoints3D && (
                 <button type="button" className={`tcm-theme-pill ${showPoints3D ? 'active' : ''}`} onClick={() => onTogglePoints3D(!showPoints3D)}>
                   <Eye size={12} /> 3D穴位{showPoints3D ? '开' : '关'}
+                </button>
+              )}
+              {onToggleNeedleXray && (
+                <button type="button" className={`tcm-theme-pill ${needleXray ? 'active' : ''}`} onClick={() => onToggleNeedleXray(!needleXray)}>
+                  针刺透视{needleXray ? '开' : '关'}
                 </button>
               )}
             </div>
@@ -294,6 +318,49 @@ cursor: 'pointer',
 
               {tab === 'points' && (
                 <div className="tcm-stack">
+              <div className="tcm-card" style={{ padding: '10px 12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  <strong>随机抽穴自测</strong>
+                  <button
+                    type="button"
+                    className="tcm-theme-pill"
+                    onClick={() => {
+                      const pts = bundle?.points ?? [];
+                      if (pts.length > 0) {
+                        setQuizPt(pts[Math.floor(Math.random() * pts.length)]);
+                        setQuizReveal(false);
+                      }
+                    }}
+                  >
+                    随机抽一穴
+                  </button>
+                </div>
+                {quizPt && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <span>
+                        <strong>{quizPt.name}</strong> {quizPt.code ? `(${quizPt.code})` : ''}
+                      </span>
+                      <button
+                        type="button"
+                        className="tcm-theme-pill active"
+                        onClick={() => {
+                          setQuizReveal(true);
+                          onFocusPoint3D?.(quizPt);
+                        }}
+                      >
+                        查看答案并3D定位
+                      </button>
+                    </div>
+                    {quizReveal && (
+                      <div className="tcm-meta" style={{ marginTop: 6 }}>
+                        <div>所属经脉：{quizPt.meridian}</div>
+                        <div>定位：{bundle?.acupoint_details?.[quizPt.name]?.simple || bundle?.acupoint_details?.[quizPt.name]?.detailed || '暂无定位说明'}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
                   <div className="tcm-search-bar">
                     <Search size={15} />
                     <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索穴位名称、编码(LU1)、经络或主治..." />
