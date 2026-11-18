@@ -181,10 +181,10 @@ def run(bundle_path):
         code = item['code']
         mer = item['meridian']
         cur = det.get(name, {})
-            if name in KEY_ACUPOINT_CLINICAL:
-                loc, ind, note = KEY_ACUPOINT_CLINICAL[name]
-                det[name] = {'code': code, 'meridian': mer, 'type': '国标经穴', 'simple': f'{mer}（{code}），{loc}；主治{ind}。', 'detailed': f'【国标编码】GB/T 12346-2021 · {code}。【所属经脉】{mer}。【精准定位】{loc}。【主治病症】{ind}。【刺灸与安全提示】{note}'}
-                continue
+        if name in KEY_ACUPOINT_CLINICAL:
+            loc, ind, note = KEY_ACUPOINT_CLINICAL[name]
+            det[name] = {'code': code, 'meridian': mer, 'type': '国标经穴', 'simple': f'{mer}（{code}），{loc}；主治{ind}。', 'detailed': f'【国标编码】GB/T 12346-2021 · {code}。【所属经脉】{mer}。【精准定位】{loc}。【主治病症】{ind}。【刺灸与安全提示】{note}'}
+            continue
         if 'zone_' in (cur.get('simple', '') + cur.get('detailed', '')):
             z, pos = pos_map.get(code, ('torso_front', [0, 1.0, 0]))
             zzh, note = ZONE_ZH.get(z, ('体表循行区', '配合骨度分寸法定位。'))
