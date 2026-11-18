@@ -63,7 +63,8 @@ jobs:
           keytool -genkeypair -v -keystore /tmp/tcm_release.jks -alias tcm3d -keyalg RSA -keysize 2048 -validity 10000 -storepass tcm3dpass -keypass tcm3dpass -dname "CN=Anatomy R1-1.0.1, OU=Medical, O=OpenSource, L=Beijing, S=BJ, C=CN"
           "$BUILD_TOOLS/zipalign" -f -p 4 "$APK_RAW" /tmp/app-aligned.apk
           "$BUILD_TOOLS/apksigner" sign --min-sdk-version 21  --ks /tmp/tcm_release.jks --ks-key-alias tcm3d --ks-pass pass:tcm3dpass --key-pass pass:tcm3dpass --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out "$APK_OUT" /tmp/app-aligned.apk
-          "$BUILD_TOOLS/apksigner" verify --verbose "$APK_OUT" | tee /tmp/verify.log
+          "$BUILD_TOOLS/apksigner" verify --min-sdk-version 21 --verbose "$APK_OUT" | tee /tmp/verify.log
+          unzip -l "$APK_OUT" | grep -E "META-INF/.*\.(RSA|EC|DSA|SF)"
           grep -E "Verified using v[123] scheme" /tmp/verify.log
           grep -q "v1 scheme.*: true" /tmp/verify.log && grep -q "v2 scheme.*: true" /tmp/verify.log && grep -q "v3 scheme.*: true" /tmp/verify.log && echo "v1=true, v2=true, v3=true verified"
           ls -lh "$APK_OUT"
