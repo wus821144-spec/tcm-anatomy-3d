@@ -181,7 +181,8 @@ def run(bundle_path):
         if mm and mm.group(1) in WAYPOINTS:
             pos, zone = _interp(mm.group(1), int(mm.group(2)))
             pos_map[code] = (zone, pos)
-            pts.append({'code': code, 'name': item['name'], 'meridian': item['meridian'], 'pos': pos, 'zone', 'angle': 'flat' if item['name'] in ('膻中', '百会', '天突') else ('oblique' if item['name'] in ('风池', '期门', '章门') else ('flat' if zone == 'head' else ('oblique' if (zone in ('torso_back', 'torso_front') and pos[1] >= 1.15) else 'perp'))): zone})
+            ang = 'flat' if item['name'] in ('膻中', '百会', '天突') else ('oblique' if item['name'] in ('风池', '期门', '章门') else ('flat' if zone == 'head' else ('oblique' if (zone in ('torso_back', 'torso_front') and pos[1] >= 1.15) else 'perp')))
+            pts.append({'code': code, 'name': item['name'], 'meridian': item['meridian'], 'pos': pos, 'zone': zone, 'angle': ang})
     if pts:
         d['points'] = pts
     det = d.get('acupoint_details', {})
