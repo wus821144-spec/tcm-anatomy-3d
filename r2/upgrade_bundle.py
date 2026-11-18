@@ -197,7 +197,14 @@ def run(bundle_path):
         mer = item['meridian']
         cur = det.get(name, {})
         if name in KEY_ACUPOINT_CLINICAL:
-            loc, ind, note = KEY_ACUPOINT_CLINICAL[name]
+            entry = KEY_ACUPOINT_CLINICAL[name]
+            if len(entry) >= 3:
+                loc, ind, note = entry[0], entry[1], entry[2]
+            else:
+                loc = entry[0]
+                parts = entry[1].split('。', 1)
+                ind = parts[0] + ('。' if parts[0] and not parts[0].endswith('。') else '')
+                note = parts[1].strip() if len(parts) > 1 and parts[1].strip() else '结合骨度分寸法精准定位，注意避让血管神经。'
             det[name] = {'code': code, 'meridian': mer, 'type': '国标经穴', 'simple': f'{mer}（{code}），{loc}；主治{ind}。', 'detailed': f'【国标编码】GB/T 12346-2021 · {code}。【所属经脉】{mer}。【精准定位】{loc}。【主治病症】{ind}。【刺灸与安全提示】{note}'}
             continue
         if 'zone_' in (cur.get('simple', '') + cur.get('detailed', '')):
