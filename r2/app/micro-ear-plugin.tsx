@@ -14,7 +14,23 @@ const MICRO_ITEMS: { id: MicroType; label: string; desc: string }[] = [
   { id: 'lobule', label: '肝小叶', desc: '展示六边形经典肝小叶、中央静脉、肝血窦与门管区三联管结构。' }
 ];
 
+const EAR_ACUPOINTS: Array<{ name: string; region: string; pos: [number, number, number]; color: number; location: string; indications: string }> = [
+  { name: '神门', region: '三角窝', pos: [0.03, 0.20, 0.055], color: 0xf59e0b, location: '三角窝后1/3上部（对耳轮上下脚分叉处上方）', indications: '镇静安神、失眠多梦、焦虑烦躁、戒断反应及各科止痛' },
+  { name: '交感', region: '对耳轮下脚', pos: [-0.09, 0.17, 0.055], color: 0x38bdf8, location: '对耳轮下脚末端与耳轮内缘交界处', indications: '内脏平滑肌痉挛痛、自主神经功能紊乱、自汗盗汗、心悸' },
+  { name: '皮质下', region: '对耳屏内侧面', pos: [-0.07, -0.17, 0.065], color: 0xa855f7, location: '对耳屏内侧面（耳甲腔外下方）', indications: '神经衰弱、失眠健忘、眩晕、慢性疼痛及血压调节' },
+  { name: '心', region: '耳甲腔', pos: [-0.02, -0.04, 0.045], color: 0xef4444, location: '耳甲腔正中凹陷处', indications: '心悸胸闷、失眠多梦、健忘、口舌生疮、脉律不齐' },
+  { name: '肺', region: '耳甲腔', pos: [-0.07, -0.08, 0.048], color: 0xfda4af, location: '耳甲腔心区周围（上、下、外侧环形区域）', indications: '咳嗽气喘、胸闷咽痛、皮肤瘙痒、鼻炎及辅助戒烟' },
+  { name: '胃', region: '耳轮脚消失处', pos: [-0.01, 0.025, 0.055], color: 0xfb923c, location: '耳轮脚消失处（耳甲艇与耳甲腔交界）', indications: '胃脘胀痛、恶心呕吐、反酸嗳气、消化不良、失眠' },
+  { name: '肝', region: '耳甲艇', pos: [0.05, 0.06, 0.048], color: 0x22c55e, location: '耳甲艇后下部（胃区后下方）', indications: '胁肋胀痛、头晕目眩、急躁易怒、月经不调、目疾' },
+  { name: '肾', region: '耳甲艇', pos: [-0.03, 0.11, 0.048], color: 0x10b981, location: '对耳轮下脚下方后部（耳甲艇顶部）', indications: '腰膝酸软、耳鸣耳聋、水肿、遗精阳痿、脱发健忘' },
+  { name: '内分泌', region: '屏间切迹', pos: [-0.11, -0.14, 0.055], color: 0xec4899, location: '耳甲腔底部屏间切迹内（近耳屏下缘）', indications: '内分泌失调、更年期综合征、痛经、痤疮及代谢调节' },
+  { name: '降压沟', region: '耳背', pos: [0.07, 0.04, -0.075], color: 0x60a5fa, location: '耳廓背面由内上方斜向外下方的凹沟', indications: '原发性高血压、肝阳上亢型头痛眩晕、耳鸣' },
+];] // ;
+
 export function MicroEarViewer() {
+const [selectedEarPt, setSelectedEarPt] = useState<string>('神门');
+const earMeshesRef = useRef<Record<string, T.Mesh>>({});
+const earRingRef = useRef<T.Mesh | null>(null);
   const [active, setActive] = useState<MicroType>('ear');
   const hostRef = useRef<HTMLDivElement>(null);
 
@@ -40,8 +56,63 @@ export function MicroEarViewer() {
 
     const grp = new T.Group();
     scene.add(grp);
-
     if (active === 'ear') {
+      const skin = new T.MeshPhysicalMaterial({ color: 0xe2b49a, roughness: 0.52, side: T.DoubleSide });
+      const ridgeMat = new T.MeshPhysicalMaterial({ color: 0xebbda4, roughness: 0.48 });
+      const fossaMat = new T.MeshStandardMaterial({ color: 0xc28a70, roughness: 0.65 });
+      const helix = new T.Mesh(new T.TorusGeometry(0.32, 0.055, 18, 48, Math.PI * 1.48), skin);
+      helix.rotation.z = -0.35;
+      const crusHelix = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(-0.18, 0.05, 0.02), new T.Vector3(-0.08, 0.03, 0.03), new T.Vector3(0.01, 0.02, 0.025)]), 20, 0.028, 12, false), ridgeMat);
+      const lobe = new T.Mesh(new T.SphereGeometry(0.14, 20, 20), skin);
+      lobe.scale.set(0.9, 1.15, 0.55);
+      lobe.position.set(-0.08, -0.31, 0);
+      const antihelix = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(-0.07, -0.15, 0.015), new T.Vector3(0.0, -0.02, 0.032), new T.Vector3(0.05, 0.10, 0.035), new T.Vector3(0.05, 0.16, 0.03)]), 24, 0.032, 12, false), ridgeMat);
+      const supCrus = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(0.05, 0.15, 0.03), new T.Vector3(0.08, 0.22, 0.03), new T.Vector3(0.09, 0.27, 0.02)]), 16, 0.024, 10, false), ridgeMat);
+      const infCrus = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(0.05, 0.15, 0.03), new T.Vector3(-0.02, 0.165, 0.035), new T.Vector3(-0.09, 0.17, 0.03)]), 16, 0.024, 10, false), ridgeMat);
+      const triFossa = new T.Mesh(new T.SphereGeometry(0.085, 18, 18), fossaMat);
+      triFossa.scale.set(1.0, 0.75, 0.25);
+      triFossa.position.set(0.02, 0.20, 0.005);
+      const tragus = new T.Mesh(new T.SphereGeometry(0.075, 16, 16), ridgeMat);
+      tragus.scale.set(0.65, 1.1, 0.55);
+      tragus.position.set(-0.17, -0.05, 0.04);
+      const antitragus = new T.Mesh(new T.SphereGeometry(0.065, 16, 16), ridgeMat);
+      antitragus.scale.set(0.85, 0.75, 0.5);
+      antitragus.position.set(-0.07, -0.17, 0.035);
+      const conchaCymba = new T.Mesh(new T.SphereGeometry(0.13, 20, 20), fossaMat);
+      conchaCymba.scale.set(1.05, 0.75, 0.26);
+      conchaCymba.position.set(-0.01, 0.08, -0.02);
+      const conchaCavum = new T.Mesh(new T.SphereGeometry(0.16, 20, 20), fossaMat);
+      conchaCavum.scale.set(0.95, 1.05, 0.28);
+      conchaCavum.position.set(-0.05, -0.07, -0.02);
+      grp.add(helix, crusHelix, lobe, antihelix, supCrus, infCrus, triFossa, tragus, antitragus, conchaCymba, conchaCavum);
+      earMeshesRef.current = {};
+      EAR_ACUPOINTS.forEach((p) => {
+        const isSel = p.name === selectedEarPt;
+        const pt = new T.Mesh(new T.SphereGeometry(isSel ? 0.028 : 0.021, 16, 16), new T.MeshStandardMaterial({ color: p.color, emissive: p.color, emissiveIntensity: isSel ? 0.95 : 0.45 }));
+        pt.position.set(p.pos[0], p.pos[1], p.pos[2]);
+        pt.userData.acupointName = p.name;
+        earMeshesRef.current[p.name] = pt;
+        grp.add(pt);
+      });
+      const selPos = EAR_ACUPOINTS.find((p) => p.name === selectedEarPt)?.pos || EAR_ACUPOINTS[0].pos;
+      const ring = new T.Mesh(new T.TorusGeometry(0.036, 0.006, 10, 24), new T.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfacc15, emissiveIntensity: 0.9 }));
+      ring.position.set(selPos[0], selPos[1], selPos[2]);
+      earRingRef.current = ring;
+      grp.add(ring);
+      const raycaster = new T.Raycaster();
+      const pointer = new T.Vector2();
+      renderer.domElement.addEventListener('click', (ev: MouseEvent) => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(Object.values(earMeshesRef.current));
+        if (hits.length > 0 && hits[0].object.userData?.acupointName) {
+          setSelectedEarPt(String(hits[0].object.userData.acupointName));
+        }
+      });
+    } else 
+    if (false && active === 'ear') {
       const skin = new T.MeshPhysicalMaterial({ color: 0xe2b49a, roughness: 0.55, side: T.DoubleSide });
       const helix = new T.Mesh(new T.TorusGeometry(0.32, 0.055, 16, 40, Math.PI * 1.45), skin);
       helix.rotation.z = -0.35;
@@ -131,7 +202,22 @@ export function MicroEarViewer() {
       renderer.dispose();
     };
   }, [active]);
-
+  useEffect(() => {
+    if (active !== 'ear') return;
+    EAR_ACUPOINTS.forEach((p) => {
+      const m = earMeshesRef.current[p.name];
+      if (!m) return;
+      const isSel = p.name === selectedEarPt;
+      m.scale.setScalar(isSel ? 1.35 : 1.0);
+      const mat = m.material as T.MeshStandardMaterial;
+      if (mat && 'emissiveIntensity' in mat) mat.emissiveIntensity = isSel ? 1.0 : 0.45;
+    });
+    const sel = EAR_ACUPOINTS.find((p) => p.name === selectedEarPt);
+    if (sel && earRingRef.current) {
+      earRingRef.current.position.set(sel.pos[0], sel.pos[1], sel.pos[2]);
+    }
+  }, [selectedEarPt, active]);
+  const activeEarPt = EAR_ACUPOINTS.find((p) => p.name === selectedEarPt) || EAR_ACUPOINTS[0];
   const cur = MICRO_ITEMS.find((m) => m.id === active) || MICRO_ITEMS[0];
 
   return (
@@ -148,6 +234,22 @@ export function MicroEarViewer() {
         <strong>{cur.label}</strong>
         <p>{cur.desc}</p>
       </div>
+      {active === 'ear' && (
+        <>
+          <div className="tcm-chip-row">
+            {EAR_ACUPOINTS.map((p) => (
+              <button key={p.name} type="button" className={selectedEarPt === p.name ? 'active' : ''} onClick={() => setSelectedEarPt(p.name)}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+          <div className="tcm-item-card static">
+            <strong>耳穴：{activeEarPt.name}（{activeEarPt.region}）</strong>
+            <p>定位：{activeEarPt.location}</p>
+            <p>主治：{activeEarPt.indications}</p>
+          </div>
+        </>
+      )}
     </div>
   );
 }
