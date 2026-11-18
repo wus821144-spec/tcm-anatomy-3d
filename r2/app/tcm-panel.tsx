@@ -237,7 +237,7 @@ cursor: 'pointer',
   }}
 >
   {needleXray ? '退出针刺透视' : '开启针刺透视'}
-</button>>
+</button>
 </div>
 )}
       {open && (
