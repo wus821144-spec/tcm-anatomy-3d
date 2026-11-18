@@ -93,13 +93,17 @@ interface TcmOverlayProps {
   onPointsLoaded?: (pts: Point3D[]) => void;
   activeMeridian3D?: string;
   onSelectMeridian3D?: (meridian: string) => void; onFocusPoint3D?: (pt: Point3D) => void;
+tappedPoint3D?: Point3D | null;
+onClearTappedPoint3D?: () => void;
 }
 
 export function TcmOverlay({
   showPoints3D = true,
   onTogglePoints3D,
   onPointsLoaded,
-  onSelectMeridian3D, onFocusPoint3D
+  onSelectMeridian3D, onFocusPoint3D,
+tappedPoint3D,
+onClearTappedPoint3D
 }: TcmOverlayProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'ziwu' | 'points' | 'meridians' | 'rx' | 'micro' | 'notes'>('ziwu');
@@ -159,6 +163,66 @@ export function TcmOverlay({
         <span>中医 · {currentZiwu.shichen.split(' ')[0]}</span>
       </button>
 
+{!open && tappedPoint3D && (
+<div
+className="tcm-floating-point glass"
+style={{
+position: 'fixed',
+right: 18,
+bottom: 72,
+zIndex: 35,
+width: 320,
+maxWidth: 'calc(100vw - 36px)',
+padding: 14,
+borderRadius: 14,
+}}
+>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+<div>
+<div className="tcm-eyebrow">
+{tappedPoint3D.meridian || '经络穴位'} · {tappedPoint3D.code}
+</div>
+<h3 style={{ margin: '4px 0 0', fontSize: 16 }}>{tappedPoint3D.name}</h3>
+</div>
+<button
+type="button"
+className="tcm-close"
+onClick={() => onClearTappedPoint3D?.()}
+aria-label="关闭"
+>
+<X size={16} />
+</button>
+</div>
+{bundle?.acupoint_details?.[tappedPoint3D.name]?.simple && (
+<p style={{ margin: '8px 0 4px', fontSize: 13 }}>
+{bundle.acupoint_details[tappedPoint3D.name].simple}
+</p>
+)}
+{bundle?.acupoint_details?.[tappedPoint3D.name]?.detailed && (
+<p style={{ margin: '4px 0 10px', fontSize: 12, opacity: 0.85 }}>
+{bundle.acupoint_details[tappedPoint3D.name].detailed}
+</p>
+)}
+<button
+type="button"
+onClick={() => {
+selectMeridian(tappedPoint3D.meridian || '全部');
+setExpandedPoint(tappedPoint3D.name);
+setTab('points');
+setOpen(true);
+}}
+style={{
+width: '100%',
+marginTop: 8,
+padding: '8px 12px',
+borderRadius: 8,
+cursor: 'pointer',
+}}
+>
+打开所属经脉与全穴位表
+</button>
+</div>
+)}
       {open && (
         <div className="tcm-modal-backdrop" onClick={() => setOpen(false)}>
           <aside className="tcm-sheet glass" onClick={(e) => e.stopPropagation()}>
