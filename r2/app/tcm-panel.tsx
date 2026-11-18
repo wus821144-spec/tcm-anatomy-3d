@@ -3,14 +3,14 @@ import { Activity, BookOpen, Clock, Compass, Eye, FileText, Layers, Search, X } 
 import { applyCarbonAccent, CARBON_ACCENTS, loadSavedCarbonAccent, r2Plugins, type CarbonAccent } from './plugin-registry';
 import { CtAndNotesPanel, MicroEarViewer } from './micro-ear-plugin';
 
-r2Plugins.register({ id: 'tcm-ziwu-clock', name: '子午流注经络时钟', version: '1.0.1', category: 'tcm' });
-r2Plugins.register({ id: 'tcm-361-acupoints', name: '国标361经穴与方剂护理', version: '1.0.1', category: 'tcm' });
-r2Plugins.register({ id: 'tcm-3d-meridians', name: '3D体表吸附穴位与经络图层', version: '1.0.1', category: 'tcm' });
-r2Plugins.register({ id: 'micro-ear-3d', name: '3D显微解剖与耳穴图谱', version: '1.0.1', category: 'anatomy' });
-r2Plugins.register({ id: 'ct-notes-sync', name: '横断面CT切片与离线笔记', version: '1.0.1', category: 'tool' });
-r2Plugins.register({ id: 'dual-sex-atlas', name: '男女双性别高精度解剖引擎', version: '1.0.1', category: 'anatomy' });
-r2Plugins.register({ id: 'bilingual-bp3d', name: 'BodyParts3D 中英双语词典', version: '1.0.1', category: 'anatomy' });
-r2Plugins.register({ id: 'carbon-theme-switcher', name: '碳墨黑多辅色引擎', version: '1.0.1', category: 'theme' });
+r2Plugins.register({ id: 'tcm-ziwu-clock', name: '子午流注经络时钟', version: '1.0.2', category: 'tcm' });
+r2Plugins.register({ id: 'tcm-361-acupoints', name: '国标361经穴与方剂护理', version: '1.0.2', category: 'tcm' });
+r2Plugins.register({ id: 'tcm-3d-meridians', name: '3D体表吸附穴位与经络图层', version: '1.0.2', category: 'tcm' });
+r2Plugins.register({ id: 'micro-ear-3d', name: '3D显微解剖与耳穴图谱', version: '1.0.2', category: 'anatomy' });
+r2Plugins.register({ id: 'ct-notes-sync', name: '横断面CT切片与离线笔记', version: '1.0.2', category: 'tool' });
+r2Plugins.register({ id: 'dual-sex-atlas', name: '男女双性别高精度解剖引擎', version: '1.0.2', category: 'anatomy' });
+r2Plugins.register({ id: 'bilingual-bp3d', name: 'BodyParts3D 中英双语词典', version: '1.0.2', category: 'anatomy' });
+r2Plugins.register({ id: 'carbon-theme-switcher', name: '碳墨黑多辅色引擎', version: '1.0.2', category: 'theme' });
 
 export interface Point3D {
   name: string;
@@ -245,7 +245,7 @@ cursor: 'pointer',
           <aside className="tcm-sheet glass" onClick={(e) => e.stopPropagation()}>
             <div className="tcm-sheet-head">
               <div>
-                <div className="tcm-eyebrow">Anatomy R1-1.0.1 · 已载入 {r2Plugins.list().length} 项模块</div>
+                <div className="tcm-eyebrow">Anatomy R1-1.0.2 · 已载入 {r2Plugins.list().length} 项模块</div>
                 <h2>中医经络 · 361经穴与显微临床库</h2>
               </div>
               <button type="button" className="tcm-close" onClick={() => setOpen(false)} aria-label="关闭">
