@@ -32,6 +32,7 @@ bundle = {
     "nursing_protocols": d1.get("nursing_protocols", []),
     "nursing_details": d2.get("nursing_details", []),
     "glossary": d1.get("glossary", []),
+    "built_in_cases": d2.get("built_in_cases", []),
 }
 with open(f"{ATLAS_DIR}/public/data/tcm_bundle.json", "w", encoding="utf-8") as f:
     json.dump(bundle, f, ensure_ascii=False, separators=(",", ":"))
@@ -46,10 +47,16 @@ for jp in glob.glob(f"{ZH_DIR}/**/*.json", recursive=True):
             for it in items:
                 if not isinstance(it, dict):
                     continue
-                en = (it.get("en_name") or it.get("english") or it.get("name_en") or it.get("name") or "").strip().lower()
-                zh = (it.get("zh_name") or it.get("chinese") or it.get("name_zh") or it.get("cn_name") or "").strip()
+                en = (it.get("nameEn") or it.get("en_name") or it.get("english") or it.get("name_en") or "").strip().lower()
+                zh = (it.get("nameCn") or it.get("zh_name") or it.get("chinese") or it.get("name_zh") or it.get("cn_name") or "").strip()
+                if (not en or not zh) and isinstance(it.get("name"), str) and "|" in it["name"]:
+                    p0, p1 = [x.strip() for x in it["name"].split("|", 1)]
+                    if not zh: zh = p0
+                    if not en: en = p1.lower()
                 if en and zh and en != zh:
                     zh_map[en] = zh
+                    if it.get("id"):
+                        zh_map[str(it["id"]).strip().lower()] = zh
     except Exception:
         pass
 with open(f"{ATLAS_DIR}/public/data/zh_dict.json", "w", encoding="utf-8") as f:
@@ -129,4 +136,4 @@ for en, zh in [
     s = s.replace(en, zh)
 s = re.sub(r'>\s*Systems\s*<', '>系统与经穴<', s); s = re.sub(r'>\s*All\s*<', '>全部<', s); s = re.sub(r'>\s*Skeleton\s*<', '>骨骼<', s); s = re.sub(r'>\s*Organs\s*<', '>脏腑<', s); _tcm_dock = "<button type=\"button\" className=\"tcm-dock-btn\" onClick={()=>window.dispatchEvent(new CustomEvent('r2-open-tcm'))}><span>经络穴位</span></button>"; _tcm_pre = "<button type=\"button\" onClick={()=>window.dispatchEvent(new CustomEvent('r2-open-tcm'))}>经穴361</button>"; s = re.sub(r'(>系统与经穴<(?:(?!</button>).)*?</button>)', r'\1' + _tcm_dock, s, count=1, flags=re.S) if "tcm-dock-btn" not in s else s; s = re.sub(r'(className=["\'][^"\']*bottom-dock[^"\']*["\'][^>]*>(?:(?!</button>).)*?</button>)', r'\1' + _tcm_dock, s, count=1, flags=re.S) if "tcm-dock-btn" not in s else s; s = re.sub(r'(>脏腑<(?:(?!</button>).)*?</button>)', r'\1' + _tcm_pre, s, count=1, flags=re.S); s = s.replace("</main>;", "  <TcmOverlay showPoints3D={state.showPoints3D!==false} onTogglePoints3D={v=>setState(s=>({...s,showPoints3D:v}))} onPointsLoaded={(pts:Point3D[])=>setState(s=>({...s,points3D:pts,showPoints3D:true}))} activeMeridian3D={state.activeMeridian} onSelectMeridian3D={m=>setState(s=>({...s,activeMeridian:m,showPoints3D:true}))} onFocusPoint3D={(pt:Point3D)=>setState(s=>({...s,focusPoint3D:pt,activeMeridian:pt.meridian,showPoints3D:true}))} tappedPoint3D={(state as any).tappedPoint3D||null} onClearTappedPoint3D={()=>setState(s=>({...s,tappedPoint3D:null}))} needleXray={!!(state as any).needleXray} onToggleNeedleXray={(v:boolean)=>setState(s=>({...s,needleXray:v,showPoints3D:true}))} />\n  </main>;")
 open(px, "w", encoding="utf-8").write(s)
-print("Assembled Anatomy R1-1.0.1 cleanly; zh_dict entries:", len(zh_map))
+print("Assembled Anatomy R1-1.0.2 cleanly; zh_dict entries:", len(zh_map))
