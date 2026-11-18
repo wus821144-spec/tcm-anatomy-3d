@@ -59,7 +59,8 @@ for fn in ["plugin-registry.ts", "bilingual-dict.ts", "micro-ear-plugin.tsx", "t
     shutil.copyfile(f"r2/app/{fn}", f"{ATLAS_DIR}/app/{fn}")
 
 gc_p = f"{ATLAS_DIR}/app/globals.css"; gc_s = open(gc_p, "r", encoding="utf-8").read(); open(gc_p, "w", encoding="utf-8").write("@import './carbon-theme.css';" + chr(10) + gc_s.replace("@import './carbon-theme.css';", ""))
-    f.write('\n@import "./carbon-theme.css";\n')
+lx = f"{ATLAS_DIR}/app/layout.tsx"
+if os.path.exists(lx): lxt = open(lx, "r", encoding="utf-8").read(); (open(lx, "w", encoding="utf-8").write("import './carbon-theme.css';" + chr(10) + lxt) if "carbon-theme.css" not in lxt else None)
 
 an = f"{ATLAS_DIR}/app/anatomy.ts"
 at = open(an, "r", encoding="utf-8").read()
