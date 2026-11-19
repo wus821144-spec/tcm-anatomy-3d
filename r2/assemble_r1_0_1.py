@@ -253,7 +253,7 @@ open(sc_p, "w", encoding="utf-8").write(st)
 
 px_p = f"{ATLAS_DIR}/app/page.tsx"
 ps = open(px_p, "r", encoding="utf-8").read()
-ps = "import { TcmOverlay, type Point3D } from './tcm-panel';\import { getChineseAnatomyExplanation } from './r2-bone-landmarks';\nnimport { loadBilingualDict, formatBilingualName, matchesBilingualQuery, type BilingualMap } from './bilingual-dict';\n" + ps
+ps = "import { TcmOverlay, type Point3D } from './tcm-panel';\nimport { getChineseAnatomyExplanation } from './r2-bone-landmarks';\nnimport { loadBilingualDict, formatBilingualName, matchesBilingualQuery, type BilingualMap } from './bilingual-dict';\n" + ps
 ps = ps.replace(
     "export default function Home(){",
     "export default function Home(){\n  const [zhDict,setZhDict]=useState<BilingualMap>({});const [extraInfo,setExtraInfo]=useState<{name:string;system:string;desc:string}|null>(null);useEffect(()=>{loadBilingualDict().then(setZhDict);setState(s=>({...s,onAcupointTap:(pt:Point3D)=>setState(prev=>({...prev,tappedPoint3D:pt,focusPoint3D:pt})),onExtraTap:(info:{name:string;system:string;desc:string})=>setExtraInfo(info)}));},[]);",
