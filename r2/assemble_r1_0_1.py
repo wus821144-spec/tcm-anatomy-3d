@@ -230,7 +230,7 @@ st = st.replace(
     "const materialFor=(system:string)=>{",
     "const muscleBump=createProceduralBump(true),boneBump=createProceduralBump(false);const sysMats:Record<string,any>={};\nconst materialFor=(system:string)=>{",
 )
-st = st.replace("new T.MeshStandardMaterial({", "new T.MeshPhysicalMaterial({", 1)
+st = st.replace("new T.MeshStandardMaterial(", "new T.MeshPhysicalMaterial(")
 st = st.replace(
     "metalness:.08,roughness:.53,",
     "metalness:.06,roughness:system==='skeletal'?.62:.46,clearcoat:system==='arterial'||system==='venous'||system==='digestive'||system==='urinary'?.55:.12,bumpMap:system==='muscular'?muscleBump:system==='skeletal'?boneBump:null,bumpScale:system==='muscular'?.007:.004,",
