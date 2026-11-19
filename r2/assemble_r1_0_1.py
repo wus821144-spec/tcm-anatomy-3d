@@ -90,7 +90,12 @@ with open(f"{ATLAS_DIR}/public/data/zh_dict.json", "w", encoding="utf-8") as f:
 for src in glob.glob("r2/app/*"):
     if os.path.isfile(src):
         shutil.copy2(src, f"{ATLAS_DIR}/app/{os.path.basename(src)}")
-
+lig_p = f"{ATLAS_DIR}/app/r2-ligament-builder.ts"
+if os.path.exists(lig_p):
+    lt = open(lig_p, "r", encoding="utf-8").read()
+    idx = lt.rfind("return { group, metas, hitTargets };")
+    if idx != -1:
+        open(lig_p, "w", encoding="utf-8").write(lt[:idx] + "return { group, metas, hitTargets };\n}\n")
 gc_p = f"{ATLAS_DIR}/app/globals.css"
 if os.path.exists(gc_p):
     gc_s = open(gc_p, "r", encoding="utf-8").read().replace("@import './carbon-theme.css';", "")
