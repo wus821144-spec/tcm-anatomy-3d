@@ -199,3 +199,288 @@ export function getChineseAnatomyExplanation(rawName: string, systemId: string):
   const key = (systemId || '').toLowerCase();
   return SYSTEM_ZH_DESC[key] || '人体标准解剖结构，可结合孤立观察与三维爆炸分解查看其邻近血管、神经与骨性标志关系。';
 }
+
+export interface BonePin3D {
+name: string;
+desc: string;
+rel: [number, number, number];
+color: number;
+}
+
+const BONE_3D_PINS_DB: Array<{ re: RegExp; pins: BonePin3D[] }> = [
+{
+re: /femur/i,
+pins: [
+{ name: '股骨头', desc: '与髋臼构成髋关节，球形关节面', rel: [-0.35, 0.94, 0.05], color: 0xec4899 },
+{ name: '股骨头凹', desc: '股骨头内侧中央，股骨头韧带附着处', rel: [-0.45, 0.94, 0.02], color: 0x38bdf8 },
+{ name: '股骨颈', desc: '连接股骨头与体，颈干角约127°易骨折', rel: [-0.18, 0.88, 0.04], color: 0xf59e0b },
+{ name: '大转子', desc: '股骨颈外上方隆起，臀中/小肌附着，体表可触及', rel: [0.35, 0.90, -0.05], color: 0xf59e0b },
+{ name: '小转子', desc: '股骨颈后内下方，髂腰肌止点', rel: [-0.10, 0.78, -0.22], color: 0xf59e0b },
+{ name: '转子间线', desc: '大小转子间前面斜线，髂股韧带附着', rel: [0.08, 0.83, 0.22], color: 0xf59e0b },
+{ name: '转子间嵴', desc: '大小转子间后面高嵴，股方肌附着', rel: [0.12, 0.83, -0.24], color: 0xf59e0b },
+{ name: '粗线', desc: '骨干后面纵行骨嵴，内收肌群与股二头肌附着', rel: [0.0, 0.50, -0.22], color: 0xf59e0b },
+{ name: '髌面', desc: '下端前面滑车状关节面，与髌骨相关节', rel: [0.0, 0.08, 0.32], color: 0xec4899 },
+{ name: '内侧髁/内上髁', desc: '下端内侧膨大，构成膝关节内侧部', rel: [-0.30, 0.05, -0.05], color: 0xec4899 },
+{ name: '外侧髁/外上髁', desc: '下端外侧膨大，外侧副韧带附着', rel: [0.30, 0.05, -0.05], color: 0xec4899 },
+{ name: '髁间窝', desc: '内外侧髁间后面深窝，交叉韧带附着', rel: [0.0, 0.04, -0.28], color: 0x38bdf8 },
+],
+},
+{
+re: /humerus/i,
+pins: [
+{ name: '肱骨头', desc: '半球形关节面，与肩胛骨关节盂构成肩关节', rel: [-0.28, 0.94, 0.0], color: 0xec4899 },
+{ name: '解剖颈', desc: '肱骨头周缘环形浅沟，关节囊附着', rel: [-0.14, 0.90, 0.02], color: 0xf59e0b },
+{ name: '外科颈', desc: '上端与骨干移行部，紧邻腋神经易骨折', rel: [0.0, 0.84, 0.0], color: 0xf59e0b },
+{ name: '大结节', desc: '上端外侧隆起，冈上/冈下/小圆肌止点', rel: [0.32, 0.92, 0.08], color: 0xf59e0b },
+{ name: '小结节', desc: '上端前面隆起，肩胛下肌止点', rel: [-0.05, 0.89, 0.28], color: 0xf59e0b },
+{ name: '结节间沟', desc: '大小结节间纵沟，肱二头肌长头腱通过', rel: [0.12, 0.89, 0.26], color: 0x38bdf8 },
+{ name: '三角肌粗隆', desc: '骨干外侧中部V形粗糙面，三角肌止点', rel: [0.26, 0.58, 0.08], color: 0xf59e0b },
+{ name: '桡神经沟', desc: '骨干后面斜行浅沟，紧贴桡神经与肱深动脉', rel: [0.05, 0.48, -0.25], color: 0x38bdf8 },
+{ name: '内上髁/尺神经沟', desc: '下端内侧突出部，后下方尺神经沟有尺神经通过', rel: [-0.38, 0.08, -0.05], color: 0x38bdf8 },
+{ name: '外上髁', desc: '下端外侧突出部，前臂伸肌总腱起点', rel: [0.36, 0.09, 0.0], color: 0xf59e0b },
+{ name: '肱骨滑车/鹰嘴窝', desc: '下端内侧滑车与尺骨滑车切迹关节，后方鹰嘴窝容纳鹰嘴', rel: [-0.10, 0.04, -0.18], color: 0xec4899 },
+],
+},
+{
+re: /tibia/i,
+pins: [
+{ name: '内侧髁', desc: '上端内侧膨大，上面有关节面与股骨内侧髁关节', rel: [-0.26, 0.94, 0.0], color: 0xec4899 },
+{ name: '外侧髁', desc: '上端外侧膨大，后下方有腓关节面', rel: [0.26, 0.94, 0.0], color: 0xec4899 },
+{ name: '髁间隆起', desc: '内外侧髁关节面之间突起，交叉韧带附着', rel: [0.0, 0.98, 0.0], color: 0xf59e0b },
+{ name: '胫骨粗隆', desc: '上端前面隆起，髌韧带附着处', rel: [0.0, 0.84, 0.30], color: 0xf59e0b },
+{ name: '胫骨前嵴', desc: '骨干前面锐利骨嵴，全长位于皮下可触及', rel: [0.0, 0.52, 0.26], color: 0xf59e0b },
+{ name: '比目鱼肌线', desc: '骨干后面斜行骨线，比目鱼肌起点', rel: [0.0, 0.72, -0.24], color: 0xf59e0b },
+{ name: '内踝', desc: '下端内侧向下突出，参与构成踝穴', rel: [-0.28, 0.04, 0.05], color: 0xf59e0b },
+{ name: '腓切迹', desc: '下端外侧三角形凹陷，与腓骨下端韧带联合', rel: [0.24, 0.07, -0.02], color: 0x38bdf8 },
+],
+},
+{
+re: /fibula/i,
+pins: [
+{ name: '腓骨头', desc: '上端膨大，与胫骨外侧髁关节，颈外侧紧贴腓总神经', rel: [0.05, 0.95, 0.0], color: 0xec4899 },
+{ name: '腓骨颈', desc: '腓骨头下方缩窄部，腓总神经绕行易损伤', rel: [0.0, 0.88, 0.0], color: 0xf59e0b },
+{ name: '腓骨体', desc: '细长骨干，供小腿外侧及后群肌附着', rel: [0.0, 0.50, 0.0], color: 0xf59e0b },
+{ name: '外踝', desc: '下端膨大扁平，低于内踝且稍靠后，构成踝关节外侧壁', rel: [0.10, 0.05, -0.05], color: 0xf59e0b },
+],
+},
+{
+re: /patella/i,
+pins: [
+{ name: '髌底', desc: '上缘宽大钝圆，股四头肌腱附着处', rel: [0.0, 0.88, 0.0], color: 0xf59e0b },
+{ name: '髌尖', desc: '下端尖锐，髌韧带起点', rel: [0.0, 0.10, 0.05], color: 0xf59e0b },
+{ name: '前面（粗糙面）', desc: '皮下可触及，有纵行血管沟与腱纤维附着', rel: [0.0, 0.52, 0.35], color: 0xf59e0b },
+{ name: '关节面（后面）', desc: '光滑软骨面，与股骨髌面构成髌股关节', rel: [0.0, 0.52, -0.35], color: 0xec4899 },
+],
+{
+re: /scapula/i,
+pins: [
+{ name: '肩峰', desc: '肩胛冈外侧端扁平突起，肩部最高点，与锁骨肩峰端关节', rel: [0.38, 0.90, 0.15], color: 0xf59e0b },
+{ name: '肩胛冈', desc: '背面横行高嵴，分隔冈上窝与冈下窝', rel: [0.05, 0.78, -0.28], color: 0xf59e0b },
+{ name: '冈上窝', desc: '肩胛冈上方凹陷，冈上肌起点', rel: [0.0, 0.86, -0.18], color: 0x38bdf8 },
+{ name: '冈下窝', desc: '肩胛冈下方宽阔凹陷，冈下肌起点', rel: [0.0, 0.52, -0.22], color: 0x38bdf8 },
+{ name: '肩胛下窝', desc: '前面（肋面）大而浅的凹陷，肩胛下肌起点', rel: [0.0, 0.52, 0.22], color: 0x38bdf8 },
+{ name: '喙突', desc: '上缘外侧向前外突出的钩状骨突，胸小肌/肱二头肌短头附着', rel: [0.26, 0.82, 0.30], color: 0xf59e0b },
+{ name: '关节盂', desc: '外侧角浅梨形关节面，与肱骨头构成肩关节', rel: [0.38, 0.72, 0.08], color: 0xec4899 },
+{ name: '肩胛下角', desc: '下端钝尖，平对第7肋或第7胸椎棘突，体表定位标志', rel: [-0.10, 0.08, -0.05], color: 0xf59e0b },
+],
+},
+{
+re: /clavicle/i,
+pins: [
+{ name: '胸骨端', desc: '内侧端粗大，与胸骨柄锁切迹构成胸锁关节', rel: [-0.44, 0.45, 0.12], color: 0xec4899 },
+{ name: '肩峰端', desc: '外侧端扁平，与肩峰构成肩锁关节', rel: [0.44, 0.58, -0.08], color: 0xec4899 },
+{ name: '锁骨体', desc: '呈S形弯曲，中1/3交界处最薄弱易骨折', rel: [0.0, 0.50, 0.05], color: 0xf59e0b },
+{ name: '锥状结节/锁骨下肌沟', desc: '外侧下面喙锁韧带附着结节与锁骨下肌止点沟', rel: [0.25, 0.42, -0.12], color: 0x38bdf8 },
+],
+},
+{
+re: /ulna/i,
+pins: [
+{ name: '鹰嘴', desc: '上端后面粗大突起，肱三头肌止点，伸肘时嵌入鹰嘴窝', rel: [0.0, 0.95, -0.22], color: 0xf59e0b },
+{ name: '滑车切迹', desc: '上端前面半月形深凹，与肱骨滑车构成肱尺关节', rel: [0.0, 0.90, 0.18], color: 0x38bdf8 },
+{ name: '冠突', desc: '滑车切迹下前方突起，屈肘时嵌入冠突窝', rel: [0.0, 0.84, 0.28], color: 0xf59e0b },
+{ name: '尺骨粗隆', desc: '冠突下方粗糙隆起，肱肌止点', rel: [0.0, 0.78, 0.24], color: 0xf59e0b },
+{ name: '尺骨头', desc: '下端小而圆，周缘环状关节面与桡骨尺切迹关节', rel: [0.0, 0.06, 0.05], color: 0xec4899 },
+{ name: '尺骨茎突', desc: '尺骨头后内侧向下细小突起，腕尺侧副韧带附着', rel: [-0.18, 0.02, -0.10], color: 0xf59e0b },
+],
+},
+{
+re: /radius/i,
+pins: [
+{ name: '桡骨头', desc: '上端扁圆形，上面凹陷与肱骨小头关节，周缘环状关节面', rel: [0.0, 0.95, 0.0], color: 0xec4899 },
+{ name: '桡骨颈', desc: '桡骨头下方缩窄部，小儿易发生桡骨头半脱位', rel: [0.0, 0.88, 0.0], color: 0xf59e0b },
+{ name: '桡骨粗隆', desc: '颈下方内前侧隆起，肱二头肌腱止点', rel: [-0.18, 0.80, 0.18], color: 0xf59e0b },
+{ name: '桡骨茎突', desc: '下端外侧向下尖突，低于尺骨茎突，鼻烟窝界标', rel: [0.28, 0.04, 0.05], color: 0xf59e0b },
+{ name: '腕关节面', desc: '下端下面凹陷关节面，与舟骨/月骨构成桡腕关节', rel: [0.0, 0.02, 0.0], color: 0xec4899 },
+],
+},
+{
+re: /pelvis|hip bone|ilium|ischium|pubis/i,
+pins: [
+{ name: '髂嵴', desc: '髂骨上缘肥厚弓形骨嵴，最高点平第4腰椎棘突', rel: [0.22, 0.95, 0.0], color: 0xf59e0b },
+{ name: '髂前上棘', desc: '髂嵴前端突起，腹股沟韧带与缝匠肌起点，体表定位关键', rel: [0.38, 0.84, 0.34], color: 0xf59e0b },
+{ name: '髂后上棘', desc: '髂嵴后端突起，平第2骶椎，表面皮肤常有骶凹', rel: [0.18, 0.84, -0.34], color: 0xf59e0b },
+{ name: '髂窝', desc: '髂骨内面光滑浅窝，髂肌起点', rel: [0.16, 0.72, 0.12], color: 0x38bdf8 },
+{ name: '坐骨大切迹', desc: '髂骨后缘与坐骨棘间深切迹，梨状肌及坐骨神经穿出', rel: [0.08, 0.48, -0.30], color: 0x38bdf8 },
+{ name: '坐骨棘', desc: '坐骨后缘尖突，骶棘韧带附着，分娩骨盆测量标志', rel: [0.05, 0.36, -0.26], color: 0xf59e0b },
+{ name: '坐骨结节', desc: '坐骨下后部粗糙大隆起，坐位负重支点与腘绳肌起点', rel: [0.16, 0.10, -0.20], color: 0xf59e0b },
+{ name: '闭孔', desc: '坐骨与耻骨围成的大卵圆形孔，闭孔膜及血管神经通过', rel: [0.10, 0.24, 0.18], color: 0x38bdf8 },
+{ name: '髋臼', desc: '髂/坐/耻三骨融合而成的深窝，与股骨头构成髋关节', rel: [0.38, 0.42, 0.05], color: 0xec4899 },
+],
+},
+{
+re: /sacrum|coccyx/i,
+pins: [
+{ name: '骶岬', desc: '第1骶椎椎体前缘向前突出，骨盆上口后界重要标志', rel: [0.0, 0.92, 0.32], color: 0xf59e0b },
+{ name: '骶前孔', desc: '盆面左右各4对孔，骶神经前支穿出', rel: [0.18, 0.62, 0.22], color: 0x38bdf8 },
+{ name: '骶后孔（八髎穴基准）', desc: '背面左右各4对孔，对应中医上/次/中/下髎穴定位', rel: [0.18, 0.62, -0.22], color: 0x38bdf8 },
+{ name: '骶正中嵴', desc: '背面正中由骶椎棘突融合而成的纵嵴', rel: [0.0, 0.60, -0.32], color: 0xf59e0b },
+{ name: '骶管裂孔', desc: '骶管下端三角形开口，两侧有骶角，硬膜外阻滞定位点', rel: [0.0, 0.16, -0.28], color: 0x38bdf8 },
+{ name: '耳状面', desc: '骶骨外侧部耳廓形关节面，与髂骨构成骶髂关节', rel: [0.36, 0.72, -0.05], color: 0xec4899 },
+],
+},
+{
+re: /vertebra|atlas|axis/i,
+pins: [
+{ name: '椎体', desc: '椎骨前方短圆柱状负重部，上下缘附着椎间盘', rel: [0.0, 0.50, 0.32], color: 0xf59e0b },
+{ name: '棘突', desc: '椎弓板后正中向后下方伸出，体表可触及计数椎骨序数', rel: [0.0, 0.42, -0.40], color: 0xf59e0b },
+{ name: '横突', desc: '椎弓两侧向外伸出的骨突，竖脊肌与韧带附着', rel: [0.38, 0.55, -0.08], color: 0xf59e0b },
+{ name: '椎孔', desc: '椎体与椎弓围成，上下贯通成椎管容纳脊髓', rel: [0.0, 0.52, -0.02], color: 0x38bdf8 },
+{ name: '上关节突', desc: '椎弓根与椎弓板交界处向上突起，与上位椎骨关节', rel: [0.20, 0.85, -0.10], color: 0xec4899 },
+{ name: '下关节突/椎间切迹', desc: '向下关节突及椎弓根下切迹，与下位构成椎间孔', rel: [0.20, 0.15, -0.10], color: 0x38bdf8 },
+],
+{
+re: /sternum/i,
+pins: [
+{ name: '颈静脉切迹（天突）', desc: '胸骨柄上缘正中凹陷，平第2胸椎下缘，对应天突穴', rel: [0.0, 0.94, 0.20], color: 0x38bdf8 },
+{ name: '胸骨柄', desc: '胸骨上部宽扁梯形，两侧有锁切迹与第1肋切迹', rel: [0.0, 0.82, 0.22], color: 0xf59e0b },
+{ name: '胸骨角（平第2肋）', desc: '柄与体交界向前微凸，平对第2肋软骨与第4胸椎下缘', rel: [0.0, 0.72, 0.30], color: 0xf59e0b },
+{ name: '胸骨体', desc: '胸骨中部扁长方形，外侧缘接第2至第7肋软骨', rel: [0.0, 0.44, 0.22], color: 0xf59e0b },
+{ name: '剑突', desc: '胸骨下端扁薄突起，平第9胸椎，对应鸠尾穴定位基准', rel: [0.0, 0.10, 0.16], color: 0xf59e0b },
+],
+},
+{
+re: /rib|costal/i,
+pins: [
+{ name: '肋头', desc: '肋骨后端膨大，关节面与胸椎椎体肋凹构成肋头关节', rel: [-0.40, 0.76, -0.30], color: 0xec4899 },
+{ name: '肋颈', desc: '肋头外侧缩窄部，连接肋头与肋结节', rel: [-0.28, 0.78, -0.34], color: 0xf59e0b },
+{ name: '肋结节', desc: '肋颈外侧向后突起，关节面与胸椎横突肋凹关节', rel: [-0.15, 0.80, -0.38], color: 0xec4899 },
+{ name: '肋角', desc: '肋骨后外侧急剧转弯处，坚强竖脊肌外侧缘标志', rel: [0.22, 0.70, -0.32], color: 0xf59e0b },
+{ name: '肋沟（下缘内面，走行肋间血管神经）', desc: '肋体内面下缘浅沟，肋间神经与血管行于其中，穿刺宜经肋骨上缘', rel: [0.30, 0.42, 0.0], color: 0x38bdf8 },
+],
+},
+{
+re: /frontal/i,
+pins: [
+{ name: '眶上切迹', desc: '眶上缘内中1/3交界处切迹/孔，眶上神经血管穿出', rel: [0.16, 0.24, 0.38], color: 0x38bdf8 },
+{ name: '眉弓', desc: '眶上缘上方横行弓状隆起，对应眉骨与攒竹/鱼腰区', rel: [0.18, 0.36, 0.42], color: 0xf59e0b },
+{ name: '额结节', desc: '额鳞前方左右最突出隆起，对应阳白穴上方骨面', rel: [0.24, 0.65, 0.36], color: 0xf59e0b },
+{ name: '额鳞', desc: '额骨前上部宽大骨板，构成前额与颅前窝前壁', rel: [0.0, 0.74, 0.32], color: 0xf59e0b },
+],
+},
+{
+re: /occipital/i,
+pins: [
+{ name: '枕外隆凸', desc: '枕骨外面正中明显隆起，对应脑户穴与风府定位基准', rel: [0.0, 0.56, -0.40], color: 0xf59e0b },
+{ name: '枕骨大孔', desc: '颅底中央大孔，延髓与脊髓移行并有椎动脉穿入', rel: [0.0, 0.14, 0.02], color: 0x38bdf8 },
+{ name: '枕髁', desc: '枕骨大孔两侧椭圆形关节面，与寰椎构成寰枕关节', rel: [0.18, 0.10, 0.08], color: 0xec4899 },
+{ name: '上项线', desc: '枕外隆凸向两侧延伸的弓形骨嵴，斜方肌与胸锁乳突肌附着', rel: [0.22, 0.52, -0.34], color: 0xf59e0b },
+],
+},
+{
+re: /temporal/i,
+pins: [
+{ name: '乳突', desc: '外耳门后下方锥状隆起，胸锁乳突肌止点，翳风穴后方骨标', rel: [0.24, 0.20, -0.22], color: 0xf59e0b },
+{ name: '茎突', desc: '乳突前内侧细长尖突，茎突舌骨肌等附着', rel: [0.14, 0.08, -0.05], color: 0xf59e0b },
+{ name: '外耳门', desc: '外耳道外侧开口，听宫/耳门穴深层骨性标志', rel: [0.26, 0.38, -0.04], color: 0x38bdf8 },
+{ name: '颧突', desc: '颞鳞前下方向前伸出，与颧骨颞突构成颧弓', rel: [0.32, 0.42, 0.28], color: 0xf59e0b },
+{ name: '下颌窝', desc: '颧突根部下方深窝，与下颌头构成颞下颌关节', rel: [0.22, 0.32, 0.10], color: 0x38bdf8 },
+],
+},
+{
+re: /mandible/i,
+pins: [
+{ name: '下颌头', desc: '髁突上端膨大关节面，与颞骨下颌窝构成颞下颌关节', rel: [0.36, 0.88, -0.22], color: 0xec4899 },
+{ name: '冠突', desc: '下颌支上缘前部扁三角形突起，颞肌止点', rel: [0.34, 0.84, 0.05], color: 0xf59e0b },
+{ name: '下颌角', desc: '下颌体与下颌支后缘交界钝角，咬肌附着，对应颊车穴', rel: [0.38, 0.26, -0.22], color: 0xf59e0b },
+{ name: '颏孔', desc: '下颌体外侧面第2前磨牙下方孔，颏神经血管穿出', rel: [0.20, 0.24, 0.34], color: 0x38bdf8 },
+{ name: '下颌支', desc: '下颌骨后方垂直扁方形骨板，内外侧供咀嚼肌附着', rel: [0.36, 0.56, -0.14], color: 0xf59e0b },
+],
+},
+{
+re: /maxilla/i,
+pins: [
+{ name: '眶下孔', desc: '眶下缘下方约1cm处孔，眶下神经穿出，对应四白穴', rel: [0.22, 0.62, 0.36], color: 0x38bdf8 },
+{ name: '牙槽突', desc: '上颌体下缘容纳上颌牙根的弓形突起', rel: [0.18, 0.16, 0.34], color: 0xf59e0b },
+{ name: '额突', desc: '向上伸至额骨鼻部，参与构成鼻外侧壁与眶内侧壁', rel: [0.12, 0.86, 0.26], color: 0xf59e0b },
+{ name: '颧突', desc: '向外上方伸出与颧骨相连，承托面部颧区力量', rel: [0.38, 0.54, 0.16], color: 0xf59e0b },
+],
+},
+{
+re: /parietal|sphenoid|ethmoid|zygomatic|nasal|skull|cranium/i,
+pins: [
+{ name: '顶结节/蝶鞍', desc: '顶骨隆凸标志或蝶骨体垂体窝（蝶鞍）骨性结构', rel: [0.26, 0.76, 0.0], color: 0x38bdf8 },
+{ name: '翼点/颧弓', desc: '额/顶/颞/蝶四骨汇合翼点（太阳穴深面）或颧弓骨突', rel: [0.36, 0.52, 0.16], color: 0xf59e0b },
+{ name: '眶缘/梨状孔', desc: '骨性眼眶边界或鼻腔前口梨状孔凹陷', rel: [0.14, 0.38, 0.38], color: 0x38bdf8 },
+{ name: '颅底关节面/枕髁', desc: '颅骨关节连接面或下颌窝/枕髁关节区', rel: [0.16, 0.14, -0.12], color: 0xec4899 },
+],
+},
+{
+re: /calcaneus/i,
+pins: [
+{ name: '跟骨结节', desc: '跟骨后端向下突出部，跟腱止点与足跟负重支点', rel: [0.0, 0.28, -0.42], color: 0xf59e0b },
+{ name: '载距突', desc: '跟骨内侧面水平突出，承托距骨头，下方有拇长屈肌腱沟', rel: [-0.32, 0.62, 0.10], color: 0xf59e0b },
+{ name: '滑车关节面/距骨关节面', desc: '跟骨上面前中后距骨关节面，构成距下关节', rel: [0.0, 0.85, 0.05], color: 0xec4899 },
+{ name: '跟骨沟', desc: '中后距骨关节面之间斜行深沟，参与构成跗骨窦', rel: [0.10, 0.78, 0.16], color: 0x38bdf8 },
+],
+},
+{
+re: /talus/i,
+pins: [
+{ name: '距骨滑车', desc: '距骨体上面鞍状关节面，与胫腓骨下端构成踝关节', rel: [0.0, 0.90, -0.05], color: 0xec4899 },
+{ name: '距骨头', desc: '前端半球形关节面，与舟骨构成距舟关节', rel: [-0.08, 0.48, 0.42], color: 0xec4899 },
+{ name: '距骨颈', desc: '距骨头与体之间缩窄部，血供薄弱易发生缺血坏死', rel: [-0.04, 0.56, 0.22], color: 0xf59e0b },
+{ name: '距骨后突', desc: '距骨体后方突起，内有拇长屈肌腱沟', rel: [0.0, 0.36, -0.40], color: 0xf59e0b },
+],
+},
+{
+re: /metatarsal|tarsal|metacarpal|carpal|phalanx|phalanges/i,
+pins: [
+{ name: '近端骨底', desc: '近端膨大部，与近侧腕/跗骨或掌/跖骨构成关节', rel: [0.0, 0.12, 0.0], color: 0xec4899 },
+{ name: '骨体', desc: '中间骨干部分，呈微弓形，供骨间肌与屈伸肌腱附着', rel: [0.0, 0.50, 0.08], color: 0xf59e0b },
+{ name: '远端骨头', desc: '远端球形或滑车状关节面，与远侧骨构成掌指/指间/跖趾关节', rel: [0.0, 0.90, 0.0], color: 0xec4899 },
+{ name: '关节面与韧带结节', desc: '骨端侧方副韧带附着结节及滑车关节面', rel: [0.24, 0.82, -0.05], color: 0xf59e0b },
+],
+},
+];
+
+const GENERIC_SKELETAL_PINS: BonePin3D[] = [
+{ name: '近端关节面', desc: '骨骼近端光滑软骨关节面，与相邻骨骼构成关节', rel: [0.0, 0.92, 0.0], color: 0xec4899 },
+{ name: '骨体骨干', desc: '骨骼主体承重与支架部分，皮质骨厚实', rel: [0.0, 0.50, 0.12], color: 0xf59e0b },
+{ name: '远端关节面', desc: '骨骼远端关节连接面，传导应力与协调运动', rel: [0.0, 0.08, 0.0], color: 0xec4899 },
+{ name: '骨性附着粗隆/结节', desc: '肌肉、肌腱或韧带附着处的骨性隆起或粗糙面', rel: [0.24, 0.65, -0.08], color: 0xf59e0b },
+];
+
+export function getBone3DPins(rawName: string, systemId?: string): BonePin3D[] {
+const name = (rawName || '').trim();
+if (!name) return [];
+const isLeft = /\bleft\b|_l\b|\(l\)|左/i.test(name);
+const mirror = (pins: BonePin3D[]): BonePin3D[] =>
+pins.map((p) => ({
+...p,
+rel: [isLeft ? -p.rel[0] : p.rel[0], p.rel[1], p.rel[2]],
+}));
+for (const entry of BONE_3D_PINS_DB) {
+if (entry.re.test(name)) {
+return mirror(entry.pins);
+}
+}
+const isSkeletal = !systemId || systemId.toLowerCase() === 'skeletal';
+if (isSkeletal) {
+return mirror(GENERIC_SKELETAL_PINS);
+}
+return [];
+}
+
+},
+},
