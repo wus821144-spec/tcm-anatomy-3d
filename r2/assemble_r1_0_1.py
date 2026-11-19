@@ -15,21 +15,21 @@ for gz in glob.glob(f"{ATLAS_DIR}/public/models/*.gz"):
 LYMPH_RE = re.compile(r"lymph|thoracic duct|thymus|tonsil|spleen", re.I)
 ENDO_RE = re.compile(r"thyroid|parathyroid|adrenal|suprarenal|pituitary|hypophysis|pineal", re.I)
 CONN_RE = re.compile(r"ligament|fascia|aponeurosis|retinaculum|meniscus|capsule", re.I)
-
+ILIOTIBIAL_RE = re.compile(r"iliotibial|fascia|aponeurosis|tendon|retinaculum", re.I)
 for jp in glob.glob(f"{ATLAS_DIR}/public/models/*.json"):
     data = json.load(open(jp, encoding="utf-8"))
     for ch in data.get("chunks", []):
         ch.pop("gzip", None)
         ch.pop("gzipBytes", None)
     for part in data.get("parts", []):
-        if isinstance(part, dict) and not part.get("system"):
+        if isinstance(part, dict) and (not part.get("system") or (part.get("system") == "skeletal" and (ILIOTIBIAL_RE.search(str(part.get("name", ""))) or CONN_RE.search(str(part.get("name", "")))))):
             nm = str(part.get("name", ""))
             if LYMPH_RE.search(nm):
                 part["system"] = "lymphatic"
             elif ENDO_RE.search(nm):
                 part["system"] = "endocrine"
-            elif CONN_RE.search(nm):
-                part["system"] = "skeletal"
+            elif ILIOTIBIAL_RE.search(nm) or CONN_RE.search(nm):
+                part["system"] = "muscular"
     with open(jp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
 
