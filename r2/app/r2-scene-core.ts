@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { getBone3DPins } from './r2-bone-landmarks';
 
 export interface R2SceneHandles {
   scene: T.Scene;
@@ -48,7 +49,8 @@ export class R2OverlayEngine {
   extraGroup = new T.Group();
   lymphGroup = new T.Group();
   endoGroup = new T.Group();
-  connGroup = new T.Group();
+  connGroup = new T.Group(); bonePinGroup = new T.Group(); lastPinKey = ''; activePinMesh: T.Mesh | null = null;
+  
   tubeMats: T.MeshStandardMaterial[] = [];
   lastAcuKey = '';
   lastFocusKey = '';
@@ -70,7 +72,7 @@ export class R2OverlayEngine {
     this.connGroup.name = 'r2_conn_group';
     this.extraGroup.add(this.lymphGroup, this.endoGroup, this.connGroup);
     handles.scene.add(this.acuGroup);
-    handles.scene.add(this.extraGroup);
+    handles.scene.add(this.extraGroup); this.bonePinGroup.name = 'r2_bone_pin_group'; handles.scene.add(this.bonePinGroup);
     const dom = handles.renderer.domElement;
     dom.addEventListener('pointerdown', (ev: PointerEvent) => { this.pdX = ev.clientX; this.pdY = ev.clientY; });
     dom.addEventListener('pointerup', (ev: PointerEvent) => {
@@ -78,7 +80,7 @@ export class R2OverlayEngine {
       const r = dom.getBoundingClientRect();
       const ndc = new T.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
       const tr = new T.Raycaster();
-      tr.setFromCamera(ndc, this.handles.camera);
+      tr.setFromCamera(ndc, this.handles.camera); if (this.bonePinGroup.visible && this.bonePinGroup.children.length) { const phs = tr.intersectObjects(this.bonePinGroup.children, true); const hp = phs.find((h) => h.object?.userData?.pinInfo); if (hp) { if (this.activePinMesh && this.activePinMesh !== hp.object) this.activePinMesh.scale.setScalar(1); hp.object.scale.setScalar(1.55); this.activePinMesh = hp.object as T.Mesh; this.extraCb?.(hp.object.userData.pinInfo); return; } }
       if (this.acuGroup.visible && this.acuGroup.children.length) {
         const hs = tr.intersectObjects(this.acuGroup.children, true);
         const ha = hs.find((h) => h.object?.userData?.acupoint);
@@ -238,23 +240,8 @@ export class R2OverlayEngine {
       this.lastExtraKey = extraKey;
       this.rebuildExtraAnatomy(bodyBox);
       dirty = true;
-    }
-   //  this.extraGroup.visible = ready && amount < 0.08 && !s.isolate;
-const sysOn = (id: string) => { const v = s.systems; if (!v) return true; if (Array.isArray(v)) return v.includes(id); if (typeof v.has === 'function') return v.has(id); return !!v[id]; };
-    const anySysOn = (() => { const v = s.systems; if (!v) return true; if (Array.isArray(v)) return v.length > 0; if (typeof v.size === 'number') return v.size > 0; return Object.values(v).some(Boolean); })();
-    const baseVis = ready && amount < 0.08 && !s.isolate;
-    if (!baseVis || !anySysOn) {
-      this.lymphGroup.visible = false;
-    
-      this.endoGroup.visible = false;
-      this.connGroup.visible = false;
-      this.extraGroup.visible = false;
-    } else {
-      this.lymphGroup.visible = sysOn('lymphatic');
-      this.endoGroup.visible = sysOn('endocrine');
-      this.connGroup.visible = sysOn('articular') || sysOn('connective') || sysOn('skeletal');
-      this.extraGroup.visible = this.lymphGroup.visible || this.endoGroup.visible || this.connGroup.visible;
-    }
+    }const visArr = Array.isArray((s as any).visible) ? (s as any).visible as string[] : null; const anyVis = visArr ? visArr.length > 0 : true; const sysOn = (id: string) => visArr ? visArr.includes(id) : true; const baseVis = ready && amount < 0.08 && !s.isolate; if (!baseVis || !anyVis) { this.extraGroup.visible = false; this.lymphGroup.visible = false; this.endoGroup.visible = false; this.connGroup.visible = false; } else { this.lymphGroup.visible = sysOn('lymphatic'); this.endoGroup.visible = sysOn('endocrine'); this.connGroup.visible = sysOn('skeletal') && sysOn('muscular'); this.extraGroup.visible = this.lymphGroup.visible || this.endoGroup.visible || this.connGroup.visible; } const sel = Array.isArray(s.selected) ? s.selected : []; const pinKey = (ready && anyVis && sel.length > 0 && amount <= 0.08) ? String(sel[0]) : ''; if (pinKey !== this.lastPinKey) { this.lastPinKey = pinKey; this.bonePinGroup.clear(); this.activePinMesh = null; if (pinKey) { const partIdx = Number(sel[0]); const part = atlas.parts[partIdx]; const mesh = pickers[partIdx]; const box = bounds[partIdx]; if (part && mesh && box && !box.isEmpty()) { const pins = getBone3DPins(part.name, part.system); if (pins.length > 0) { const bMin = box.min; const bSize = box.getSize(new T.Vector3()); const bCenter = box.getCenter(new T.Vector3()); const maxDim = Math.max(bSize.x, bSize.y, bSize.z, 0.05); const rDot = Math.max(0.004, Math.min(0.012, maxDim * 0.032)); const pinRc = new T.Raycaster(); for (const pin of pins) { const rawPos = new T.Vector3(bMin.x + (0.5 + pin.rel[0]) * bSize.x, bMin.y + pin.rel[1] * bSize.y, bMin.z + (0.5 + pin.rel[2]) * bSize.z); const dirToCenter = bCenter.clone().sub(rawPos); if (dirToCenter.lengthSq() < 1e-6) dirToCenter.set(0, 0, -1); dirToCenter.normalize(); const origin = rawPos.clone().sub(dirToCenter.clone().multiplyScalar(maxDim * 0.6)); pinRc.set(origin, dirToCenter); const hits = pinRc.intersectObject(mesh, false); const surfPos = hits.length > 0 ? hits[0].point.clone().addScaledVector(dirToCenter, -rDot * 0.35) : rawPos; const core = new T.Mesh(new T.SphereGeometry(rDot, 14, 14), new T.MeshBasicMaterial({ color: pin.color })); core.position.copy(surfPos); core.userData.pinInfo = { name: pin.name, system: part.name + ' · 骨骼标志', desc: pin.desc }; const halo = new T.Mesh(new T.SphereGeometry(rDot * 1.45, 14, 14), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.72, side: T.BackSide })); core.add(halo); this.bonePinGroup.add(core); } } } } dirty = true; } this.bonePinGroup.visible = !!pinKey && this.bonePinGroup.children.length > 0;
+
     // 
     const fpt = s.focusPoint3D;
     const fKey = fpt ? (fpt.code || fpt.name || '') : '';
