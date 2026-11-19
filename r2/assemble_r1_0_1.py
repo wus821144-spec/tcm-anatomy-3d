@@ -22,14 +22,14 @@ for jp in glob.glob(f"{ATLAS_DIR}/public/models/*.json"):
         ch.pop("gzip", None)
         ch.pop("gzipBytes", None)
     for part in data.get("parts", []):
-        if isinstance(part, dict):
+        if isinstance(part, dict) and not part.get("system"):
             nm = str(part.get("name", ""))
             if LYMPH_RE.search(nm):
                 part["system"] = "lymphatic"
             elif ENDO_RE.search(nm):
                 part["system"] = "endocrine"
-            elif CONN_RE.search(nm) and part.get("system") in ("skeletal", "muscular", "connective", ""):
-                part["system"] = "articular"
+            elif CONN_RE.search(nm):
+                part["system"] = "skeletal"
     with open(jp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
 
@@ -204,9 +204,10 @@ if os.path.exists(an_p):
         "Urinary": "泌尿系统", "Reproductive": "生殖系统", "Endocrine": "内分泌系统",
         "Integumentary": "体被皮肤系统", "Sense Organs": "感觉器官", "Articular": "关节韧带与结缔组织",
         "Connective": "结缔筋膜系统", "Heart": "心脏", "Male": "成年男性", "Female": "成年女性",
+        "Skeleton": "骨骼系统", "Muscles": "肌肉系统", "Sensory organs": "感觉器官", "Arteries": "动脉系统", "Veins": "静脉系统", "Nervous system": "神经系统", "Lymphatic system": "淋巴系统", "Respiratory system": "呼吸系统", "Digestive system": "消化系统", "Urinary system": "泌尿系统", "Reproductive system": "生殖系统", "Endocrine system": "内分泌系统", "Integumentary system": "体被皮肤系统", "Connective tissue": "结缔组织与韧带", "Joints & ligaments": "关节与韧带",
     }
     for en, zh in SYS_ZH.items():
-        at = re.sub(rf"(['\"]){re.escape(en)}(\s+System)?\1", f"'{zh}'", at)
+        at = re.sub(rf"(['\"]){re.escape(en)}(\s+System)?\1", f"'{zh}'", at, flags=re.I)
     DESC_ZH = {
         "Bones form the supporting framework": "骨骼构成人体支架、保护脏器并提供肌肉附着；表面分布突、棘、嵴、粗隆、结节、髁、窝、沟、孔、管等骨性标志，既是体表触诊与骨度分寸取穴基准，也参与矿物质储存与造血。",
         "Skeletal muscles generate movement": "骨骼肌通过肌腱起止于骨骼与筋膜，收缩牵引关节产生运动并维持姿势；肌间隙与深筋膜是重要神经血管束及中医经筋、腠理循行层次。",
@@ -252,7 +253,7 @@ open(sc_p, "w", encoding="utf-8").write(st)
 
 px_p = f"{ATLAS_DIR}/app/page.tsx"
 ps = open(px_p, "r", encoding="utf-8").read()
-ps = "import { TcmOverlay, type Point3D } from './tcm-panel';\nimport { loadBilingualDict, formatBilingualName, matchesBilingualQuery, type BilingualMap } from './bilingual-dict';\n" + ps
+ps = "import { TcmOverlay, type Point3D } from './tcm-panel';\import { getChineseAnatomyExplanation } from './r2-bone-landmarks';\nnimport { loadBilingualDict, formatBilingualName, matchesBilingualQuery, type BilingualMap } from './bilingual-dict';\n" + ps
 ps = ps.replace(
     "export default function Home(){",
     "export default function Home(){\n  const [zhDict,setZhDict]=useState<BilingualMap>({});const [extraInfo,setExtraInfo]=useState<{name:string;system:string;desc:string}|null>(null);useEffect(()=>{loadBilingualDict().then(setZhDict);setState(s=>({...s,onAcupointTap:(pt:Point3D)=>setState(prev=>({...prev,tappedPoint3D:pt,focusPoint3D:pt})),onExtraTap:(info:{name:string;system:string;desc:string})=>setExtraInfo(info)}));},[]);",
@@ -262,6 +263,7 @@ ps = ps.replace("{chosen?name(chosen.name):''}", "{chosen?formatBilingualName(ch
 ps = ps.replace("{name(c.name)}", "{formatBilingualName(c.name,zhDict)}")
 ps = ps.replace("{name(p.name)}", "{formatBilingualName(p.name,zhDict)}")
 ps = ps.replace("Male reference body", "成年男性标准体").replace("Female reference body", "成年女性标准体")
+ps = ps.replace("ADULT HUMAN · MALE", "成年男性 · 3D 解剖图谱").replace("ADULT HUMAN · FEMALE", "成年女性 · 3D 解剖图谱").replace("{chosen&&selected?explanation(chosen.name,selected.system,sex,language):''}", "{chosen&&selected?getChineseAnatomyExplanation(chosen.name,selected.system):''}").replace('className="structure-description"', 'className="structure-description" style={{whiteSpace:\'pre-line\'}}')
 ps = ps.replace(
     'aria-label="Open system layers"><Layers3 size={20}/><span>{t(\'systems\')}</span></Button>',
     'aria-label="Open system layers"><Layers3 size={20}/><span>{t(\'systems\')}</span></Button><Button variant="ghost" className="tcm-dock-btn" onClick={()=>window.dispatchEvent(new CustomEvent(\'r2-open-tcm\'))}><span>经络穴位</span></Button>',
