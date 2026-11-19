@@ -61,8 +61,8 @@ export const LYMPH_SEARCH_INDEX: ExtraAnatMeta[] = [
   { id: 'lymph_intestinal_trunk', name: '肠干', en: 'Intestinal Trunk', system: 'lymphatic', region: 'torso', desc: '汇集腹腔、肠系膜上及肠系膜下淋巴结输出管，富含乳糜微粒，注入乳糜池。', clinical: '肠道脂肪吸收与乳糜性腹水病理核心通道。' },
   { id: 'lymph_jugular_trunk_l', name: '左颈干', en: 'Left Jugular Trunk', system: 'lymphatic', region: 'head', desc: '收集头颈部左侧深层淋巴，沿颈内静脉下行注入胸导管弓或左静脉角。', clinical: '头颈部肿瘤颈清扫术重要回流主干。' },
   { id: 'lymph_jugular_trunk_r', name: '右颈干', en: 'Right Jugular Trunk', system: 'lymphatic', region: 'head', desc: '收集头颈部右侧深层淋巴，注入右淋巴导管或右静脉角。', clinical: '甲状腺及喉咽癌右侧颈淋巴结转移通路。' },
-  { id: 'lymph_subclavian_trunk_l', name: '左锁骨下干', en: 'Left Subclavian Trunk', system: 'lymphatic', region: 'arm_l', desc: '起自左腋尖淋巴结，沿锁骨下静脉上缘内行注入胸导管或左静脉角。', clinical: '乳腺癌左腋窝转移后向锁骨上及静脉角引流主干。' },
-  { id: 'lymph_subclavian_trunk_r', name: '右锁骨下干', en: 'Right Subclavian Trunk', system: 'lymphatic', region: 'arm_r', desc: '起自右腋尖淋巴结，注入右淋巴导管或右静脉角。', clinical: '右上肢及右乳腺淋巴回流终点干。' }
+  { id: 'lymph_subclavian_trunk_l', name: '左锁骨下干', en: 'Left Subclavian Trunk', system: 'lymphatic', region: 'arm_l', desc: '起自左腋尖淋巴结，沿锁骨下静脉上缘内行注入胸导管或左静脉角。', clinical: '乳腺癌左腋窝转移后,向锁骨上及静脉角引流主干。' },
+  { id: 'lymph_subclavian_trunk_r', name: '右锁骨下干', en: 'Right Subclavian Trunk', system: 'lymphatic', region: 'arm_r', desc: '起自右腋尖淋巴结，注入右淋巴导管或右静脉角。', clinical: '右上肢及右乳腺淋巴回流终点干。' },
   // 3. 头颈部淋巴结群 (Head & Neck Nodes)
   { id: 'lymph_occipital', name: '枕淋巴结', en: 'Occipital Nodes', system: 'lymphatic', region: 'head', desc: '位于枕骨大孔后方斜方肌起点表面，收集枕部及项上部淋巴。', clinical: '头皮枕部感染或风疹常致此群肿大压痛。' },
   { id: 'lymph_mastoid', name: '乳突淋巴结 (耳后)', en: 'Mastoid (Retroauricular) Nodes', system: 'lymphatic', region: 'head', desc: '位于颞骨乳突表面，收集颞顶区、耳廓后面及外耳道淋巴。', clinical: '外耳道炎、中耳乳突炎及风疹典型肿大部位。' },
@@ -110,7 +110,7 @@ export const LYMPH_SEARCH_INDEX: ExtraAnatMeta[] = [
   { id: 'lymph_leg_vessels', name: '下肢浅深淋巴管网', en: 'Lower Limb Superficial & Deep Lymphatic Vessels', system: 'lymphatic', region: 'leg_r', desc: '浅淋巴管伴大/小隐静脉上行，深淋巴管伴胫前/后及股血管上行至腹股沟深结。', clinical: '丝虫病象皮肿或盆腔术后下肢淋巴水肿核心通路。' },
 
   { id: 'lymph_bronchomediastinal_l', name: '左支气管纵隔干', en: 'Left Bronchomediastinal Trunk', system: 'lymphatic', region: 'torso', desc: '收集左肺、左支气管、心包及左半胸壁深层淋巴，注入胸导管。', clinical: '左肺肺癌纵隔淋巴结分期关键引流路径。' },
-  { id: 'lymph_bronchomediastinal_r', name: '右支气管纵隔干', en: 'Right Bronchomediastinal Trunk', system: 'lymphatic', region: 'torso', desc: '收集右肺、右支气管及右半胸壁深层淋巴，注入右淋巴导管。', clinical: '右肺及纵隔肿瘤向右侧静脉角转移通路。'
+  { id: 'lymph_bronchomediastinal_r', name: '右支气管纵隔干', en: 'Right Bronchomediastinal Trunk', system: 'lymphatic', region: 'torso', desc: '收集右肺、右支气管及右半胸壁深层淋巴，注入右淋巴导管。', clinical: '右肺及纵隔肿瘤向右侧静脉角转移通路。'},
 ];
 
 function mulberry32(seed: number): () => number {
