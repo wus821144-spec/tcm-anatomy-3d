@@ -82,6 +82,7 @@ function createLigamentMaterials(): Record<MatKind, T.MeshStandardMaterial> {
       ...baseBump,
     }),
   };
+}
 function buildRibbonGeometry(curve: T.CatmullRomCurve3, width: number, segments = 16): T.BufferGeometry {
   const pts = curve.getPoints(segments);
   const positions: number[] = [];
