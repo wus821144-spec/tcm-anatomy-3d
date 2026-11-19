@@ -279,7 +279,7 @@ home_hook = (
 )
 ps = ps.replace("export default function Home(){", home_hook, 1)
 ps = ps.replace("c.name.toLowerCase().includes(term)||c.id.toLowerCase().includes(term)", "matchesBilingualQuery(c.name,term,zhDict)||c.id.toLowerCase().includes(term)")
-ps = ps.replace("{chosen?name(chosen.name):''}", "{chosen?formatBilingualName(chosen.name,zhDict):''}")
+ps = ps.replace("{chosen?name(chosen.name):''}", "{chosen?formatBilingualName(chosen.name,zhDict):''}").replace("{chosen?.name}", "{chosen?.name?formatBilingualName(chosen.name,zhDict):''}").replace("{selected?.name}", "{selected?.name?formatBilingualName(selected.name,zhDict):''}")
 ps = ps.replace("{name(c.name)}", "{formatBilingualName(c.name,zhDict)}")
 ps = ps.replace("{name(p.name)}", "{formatBilingualName(p.name,zhDict)}")
 ps = ps.replace("Male reference body", "成年男性标准体").replace("Female reference body", "成年女性标准体")
