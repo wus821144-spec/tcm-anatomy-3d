@@ -207,7 +207,7 @@ if os.path.exists(an_p):
         "Skeleton": "骨骼系统", "Muscles": "肌肉系统", "Sensory organs": "感觉器官", "Arteries": "动脉系统", "Veins": "静脉系统", "Nervous system": "神经系统", "Lymphatic system": "淋巴系统", "Respiratory system": "呼吸系统", "Digestive system": "消化系统", "Urinary system": "泌尿系统", "Reproductive system": "生殖系统", "Endocrine system": "内分泌系统", "Integumentary system": "体被皮肤系统", "Connective tissue": "结缔组织与韧带", "Joints & ligaments": "关节与韧带",
     }
     for en, zh in SYS_ZH.items():
-        at = re.sub(rf"(['\"]){re.escape(en)}(\s+System)?\1", f"'{zh}'", at, flags=re.I)
+        at = re.sub(rf"(name|label)\s*:\s*(['\"]){re.escape(en)}(\s+System)?\2", rf"\1:'{zh}'", at)
     DESC_ZH = {
         "Bones form the supporting framework": "骨骼构成人体支架、保护脏器并提供肌肉附着；表面分布突、棘、嵴、粗隆、结节、髁、窝、沟、孔、管等骨性标志，既是体表触诊与骨度分寸取穴基准，也参与矿物质储存与造血。",
         "Skeletal muscles generate movement": "骨骼肌通过肌腱起止于骨骼与筋膜，收缩牵引关节产生运动并维持姿势；肌间隙与深筋膜是重要神经血管束及中医经筋、腠理循行层次。",
