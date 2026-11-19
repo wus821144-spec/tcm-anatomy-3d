@@ -259,10 +259,25 @@ ps = (
     "import { getChineseAnatomyExplanation } from './r2-bone-landmarks';\n"
     + ps
 )
-ps = ps.replace(
-    "export default function Home(){",
-    "export default function Home(){\n  const [zhDict,setZhDict]=useState<BilingualMap>({});const [extraInfo,setExtraInfo]=useState<{name:string;system:string;desc:string}|null>(null);const [bonePins,setBonePins]=useState<any[]>([]);const [boneQuiz,setBoneQuiz]=useState<string>('');useEffect(()=>{loadBilingualDict().then(setZhDict);setState(s=>({...s,onAcupointTap:(pt:Point3D)=>setState(prev=>({...prev,tappedPoint3D:pt,focusPoint3D:pt}),)onBonePinsLoaded:(pins:any[])=>setBonePins(pins),onExtraTap:(info:{name:string;system:string;desc:string};isQuizHit?:boolean)={>setExtraInfo(info);if(info.isQuizHit){setTimeout(()=>{setBonePins(curr=>{if(curr.length>0){const next=curr[Math.floor(Math.random()*curr.length)];const name=next?.name||next?.label||String(next||'');setBoneQuiz(name);setState((prev:any)=>({...prev,boneQuizTarget:name}));}return curr;});},900);}}}));},[]);",
+home_hook = (
+    "export default function Home(){\n"
+    "  const [zhDict,setZhDict]=useState<BilingualMap>({});\n"
+    "  const [extraInfo,setExtraInfo]=useState<{name:string;system:string;desc:string;isQuizHit?:boolean}|null>(null);\n"
+    "  const [bonePins,setBonePins]=useState<any[]>([]);\n"
+    "  const [boneQuiz,setBoneQuiz]=useState<string>('');\n"
+    "  const pinsRef=useRef<any[]>([]);\n"
+    "  useEffect(()=>{pinsRef.current=bonePins;},[bonePins]);\n"
+    "  useEffect(()=>{setState(s=>({...s,boneQuizMode:!!boneQuiz,boneQuizTarget:boneQuiz} as any));},[boneQuiz]);\n"
+    "  useEffect(()=>{\n"
+    "    loadBilingualDict().then(setZhDict);\n"
+    "    setState(s=>({...s,\n"
+    "      onAcupointTap:(pt:Point3D)=>setState(prev=>({...prev,tappedPoint3D:pt,focusPoint3D:pt} as any)),\n"
+    "      onBonePinsLoaded:(pins:any[])=>setBonePins(pins),\n"
+    "      onExtraTap:(info:any)=>{setExtraInfo(info);if(info?.isQuizHit){setTimeout(()=>{const ps=pinsRef.current;if(ps.length){setBoneQuiz(ps[Math.floor(Math.random()*ps.length)].name);}},900);}},\n"
+    "    } as any));\n"
+    "  },[]);\n"
 )
+ps = ps.replace("export default function Home(){", home_hook, 1)
 ps = ps.replace("c.name.toLowerCase().includes(term)||c.id.toLowerCase().includes(term)", "matchesBilingualQuery(c.name,term,zhDict)||c.id.toLowerCase().includes(term)")
 ps = ps.replace("{chosen?name(chosen.name):''}", "{chosen?formatBilingualName(chosen.name,zhDict):''}")
 ps = ps.replace("{name(c.name)}", "{formatBilingualName(c.name,zhDict)}")
