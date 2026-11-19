@@ -46,6 +46,9 @@ export function setupStudioLighting(scene: T.Scene, renderer: T.WebGLRenderer): 
 export class R2OverlayEngine {
   acuGroup = new T.Group();
   extraGroup = new T.Group();
+  lymphGroup = new T.Group();
+  endoGroup = new T.Group();
+  connGroup = new T.Group();
   tubeMats: T.MeshStandardMaterial[] = [];
   lastAcuKey = '';
   lastFocusKey = '';
@@ -62,6 +65,10 @@ export class R2OverlayEngine {
     this.handles = handles;
     this.acuGroup.name = 'r2_acupoint_group';
     this.extraGroup.name = 'r2_extra_anatomy_group';
+    this.lymphGroup.name = 'r2_lymph_group';
+    this.endoGroup.name = 'r2_endo_group';
+    this.connGroup.name = 'r2_conn_group';
+    this.extraGroup.add(this.lymphGroup, this.endoGroup, this.connGroup);
     handles.scene.add(this.acuGroup);
     handles.scene.add(this.extraGroup);
     const dom = handles.renderer.domElement;
@@ -86,7 +93,63 @@ export class R2OverlayEngine {
   }
 
   private rebuildExtraAnatomy(bodyBox: T.Box3): void {
-    this.extraGroup.clear();
+   this.lymphGroup.clear();
+    this.endoGroup.clear();
+    this.connGroup.clear();
+    const minY = bodyBox.isEmpty() ? 0 : bodyBox.min.y;
+    const spanY = Math.max(0.5, bodyBox.isEmpty() ? 1.7 : bodyBox.max.y - bodyBox.min.y);
+    const c = bodyBox.isEmpty() ? new T.Vector3(0, 0.85, 0) : bodyBox.getCenter(new T.Vector3());
+    const sz = bodyBox.isEmpty() ? new T.Vector3(0.5, 1.7, 0.28) : bodyBox.getSize(new T.Vector3());
+    const pos = (rx: number, ry: number, rz: number) => new T.Vector3(c.x + rx * sz.x, minY + ry * spanY, c.z + rz * sz.z);
+    const addNode = (group: T.Group, geo: T.BufferGeometry, color: number, p: T.Vector3, info: { name: string; system: string; desc: string }, opacity = 0.9) => {
+      const m = new T.Mesh(geo, new T.MeshPhysicalMaterial({ color, roughness: 0.35, clearcoat: 0.4, transparent: opacity < 1, opacity }));
+      m.position.copy(p);
+      m.userData = { extraInfo: info };
+      group.add(m);
+    };
+    const addTube = (group: T.Group, pts: T.Vector3[], r: number, color: number, info: { name: string; system: string; desc: string }, opts?: { seg?: number; radSeg?: number; opacity?: number; emissive?: number; ei?: number }) => {
+      const m = new T.Mesh(
+        new T.TubeGeometry(new T.CatmullRomCurve3(pts), opts?.seg ?? 20, r, opts?.radSeg ?? 8, false),
+        new T.MeshPhysicalMaterial({ color, emissive: opts?.emissive ?? 0x000000, emissiveIntensity: opts?.ei ?? 0, roughness: 0.35, clearcoat: 0.4, transparent: (opts?.opacity ?? 0.9) < 1, opacity: opts?.opacity ?? 0.9 })
+      );
+      m.userData = { extraInfo: info };
+      group.add(m);
+    };
+    // Lymphatic: Thoracic duct + Tributaries + Right lymphatic duct + Cisterna chyli + Lymph nodes
+    addTube(this.lymphGroup, [pos(0.01, 0.56, -0.04), pos(0.01, 0.65, -0.05), pos(-0.015, 0.74, -0.04), pos(-0.055, 0.81, 0.03)], 0.0024, 0x4ade80, { name: '胸导管 · Thoracic Duct', system: '淋巴系统', desc: '人体最大淋巴导管，起自乳糜池，沿脊柱前方上行注入左静脉角，收集下半身及左上半身淋巴。' }, { seg: 24, emissive: 0x15803d, ei: 0.25 });
+    addTube(this.lymphGroup, [pos(-0.04, 0.77, -0.02), pos(-0.08, 0.79, 0.01), pos(-0.12, 0.76, 0.02)], 0.0016, 0x4ade80, { name: '胸导管分支 · Thoracic Duct Tributary', system: '淋巴系统', desc: '汇入胸导管的左锁骨下干与支气管纵隔干分支，引流左胸及左上肢淋巴。' }, { seg: 16, emissive: 0x15803d, ei: 0.2 });
+    addTube(this.lymphGroup, [pos(0.06, 0.77, -0.02), pos(0.055, 0.80, 0.01), pos(0.05, 0.81, 0.03)], 0.0016, 0x4ade80, { name: '右淋巴导管 · Right Lymphatic Duct', system: '淋巴系统', desc: '短而粗的淋巴导管，注入右静脉角，收集右上半身（右头颈、右上肢、右半胸）淋巴。' }, { seg: 16, emissive: 0x15803d, ei: 0.2 });
+    addNode(this.lymphGroup, new T.SphereGeometry(0.0045, 12, 12), 0x4ade80, pos(0.01, 0.56, -0.04), { name: '乳糜池 · Cisterna Chyli', system: '淋巴系统', desc: '位于第1-2腰椎前方，胸导管起始处的囊状膨大。' });
+    for (const sgn of [-1, 1]) {
+      const side = sgn > 0 ? '左' : '右';
+      addNode(this.lymphGroup, new T.SphereGeometry(0.003, 10, 10), 0x22c55e, pos(sgn * 0.07, 0.84, 0.02), { name: `${side}侧颈深淋巴结群`, system: '淋巴系统', desc: '沿颈内静脉排列，收集头颈部淋巴回流。' });
+      addNode(this.lymphGroup, new T.SphereGeometry(0.0038, 10, 10), 0x22c55e, pos(sgn * 0.22, 0.74, 0.02), { name: `${side}侧腋窝淋巴结群`, system: '淋巴系统', desc: '分外侧、胸肌、肩胛下等群，引流上肢及胸壁乳房淋巴。' });
+      addNode(this.lymphGroup, new T.SphereGeometry(0.0035, 10, 10), 0x22c55e, pos(sgn * 0.12, 0.49, 0.14), { name: `${side}侧腹股沟淋巴结群`, system: '淋巴系统', desc: '位于腹股沟韧带下方，引流下肢及会阴部淋巴。' });
+    }
+   // Endocrine: Pituitary, Pineal, Parathyroids, Adrenals
+    addNode(this.endoGroup, new T.SphereGeometry(0.0035, 12, 12), 0xf43f5e, pos(0, 0.925, 0.07), { name: '脑垂体 · Pituitary Gland', system: '内分泌系统', desc: '位于蝶鞍垂体窝内，分泌生长激素、促甲状腺激素等，为内分泌调控中枢。' });
+    addNode(this.endoGroup, new T.SphereGeometry(0.0028, 10, 10), 0xfb7185, pos(0, 0.935, -0.02), { name: '松果体 · Pineal Gland', system: '内分泌系统', desc: '位于丘脑后上方，分泌褪黑素调节昼夜节律。' });
+    for (const sgn of [-1, 1]) {
+      const side = sgn > 0 ? '左' : '右';
+      addNode(this.endoGroup, new T.SphereGeometry(0.0022, 8, 8), 0xf59e0b, pos(sgn * 0.028, 0.835, 0.01), { name: `${side}侧甲状旁腺`, system: '内分泌系统', desc: '位于甲状腺侧叶后面，分泌甲状旁腺素调节血钙平衡。' });
+      addNode(this.endoGroup, new T.ConeGeometry(0.007, 0.011, 10), 0xf97316, pos(sgn * 0.095, 0.625, -0.05), { name: `${side}侧肾上腺 · Adrenal`, system: '内分泌系统', desc: '位于肾脏上方，皮质分泌皮质醇/醛固酮，髓质分泌肾上腺素。' });
+    }
+    // Connective / Fascia / Ligaments (smooth anatomical TubeGeometry curves)
+    for (const sgn of [-1, 0, 1]) {
+      addTube(this.connGroup, [pos(sgn * 0.05, 0.68, -0.115), pos(sgn * 0.08, 0.61, -0.125), pos(sgn * 0.04, 0.54, -0.115)], 0.005, 0xe2e8f0, { name: '胸腰筋膜 · Thoracolumbar Fascia', system: '结缔组织与筋膜', desc: '覆盖腰背深层肌群的致密纤维膜，连接背阔肌与腹横肌，稳定腰椎。' }, { opacity: 0.72 });
+    }
+    addTube(this.connGroup, [pos(0, 0.90, -0.09), pos(0, 0.86, -0.095), pos(0, 0.82, -0.09)], 0.0032, 0xcbd5e1, { name: '项韧带 · Nuchal Ligament', system: '结缔组织与韧带', desc: '位于颈椎棘突后方的矢状位弹性纤维膜，协助维持头部直立姿势。' }, { opacity: 0.85 });
+    for (const sgn of [-1, 1]) {
+      const side = sgn > 0 ? '左' : '右';
+      addTube(this.connGroup, [pos(sgn * 0.21, 0.49, 0.01), pos(sgn * 0.22, 0.39, 0.0), pos(sgn * 0.19, 0.29, 0.01)], 0.0045, 0xdbeafe, { name: `${side}侧髂胫束 · Iliotibial Band`, system: '结缔组织与筋膜', desc: '大腿外侧阔筋膜增厚形成的强韧纤维带，起自髂嵴止于胫骨外侧髁。' }, { opacity: 0.82 });
+      addTube(this.connGroup, [pos(sgn * 0.31, 0.48, 0.025), pos(sgn * 0.33, 0.475, 0.03), pos(sgn * 0.35, 0.48, 0.025)], 0.0025, 0xe2e8f0, { name: `${side}侧腕横韧带 · Flexor Retinaculum`, system: '结缔组织与韧带', desc: '跨越腕骨掌侧形成腕管顶部，保护正中神经及屈肌腱。' }, { opacity: 0.88 });
+      addTube(this.connGroup, [pos(sgn * 0.19, 0.52, 0.09), pos(sgn * 0.12, 0.49, 0.125), pos(sgn * 0.05, 0.47, 0.135)], 0.0028, 0xf1f5f9, { name: `${side}侧腹股沟韧带 · Inguinal Ligament`, system: '结缔组织与韧带', desc: '起自髂前上棘止于耻骨结节，构成腹股沟管下壁与股三角上界。' }, { opacity: 0.88 });
+      addTube(this.connGroup, [pos(sgn * 0.145, 0.29, -0.01), pos(sgn * 0.155, 0.275, 0.01), pos(sgn * 0.165, 0.26, 0.025)], 0.0022, 0xf8fafc, { name: `${side}侧前交叉韧带 · ACL`, system: '结缔组织与韧带', desc: '起自股骨外侧髁内侧面，斜向前下止于胫骨髁间前区，防止胫骨前移。' }, { opacity: 0.92 });
+      addTube(this.connGroup, [pos(sgn * 0.165, 0.29, 0.015), pos(sgn * 0.155, 0.275, -0.005), pos(sgn * 0.145, 0.26, -0.02)], 0.0022, 0xe2e8f0, { name: `${side}侧后交叉韧带 · PCL`, system: '结缔组织与韧带', desc: '起自股骨内侧髁外侧面，斜向后下止于胫骨髁间后区，防止胫骨后移。' }, { opacity: 0.92 });
+      addTube(this.connGroup, [pos(sgn * 0.15, 0.14, -0.045), pos(sgn * 0.15, 0.09, -0.052), pos(sgn * 0.15, 0.04, -0.055)], 0.0036, 0xf1f5f9, { name: `${side}侧跟腱 · Achilles Tendon`, system: '结缔组织与韧带', desc: '人体最粗壮的肌腱，由腓肠肌与比目鱼肌腱向下融合止于跟骨结节。' }, { opacity: 0.9 });
+    }
+    /*
+      this.extraGroup.clear();
     const minY = bodyBox.isEmpty() ? 0 : bodyBox.min.y;
     const spanY = Math.max(0.5, bodyBox.isEmpty() ? 1.7 : bodyBox.max.y - bodyBox.min.y);
     const c = bodyBox.isEmpty() ? new T.Vector3(0, 0.85, 0) : bodyBox.getCenter(new T.Vector3());
@@ -129,6 +192,8 @@ export class R2OverlayEngine {
       addNode(new T.BoxGeometry(0.01, spanY * 0.24, 0.022), 0xe2e8f0, pos(sgn * 0.21, 0.38, 0.01), { name: `${side}侧髂胫束 · Iliotibial Band`, system: '结缔筋膜系统', desc: '阔筋膜外侧增厚纵行纤维带，起自髂嵴止于胫骨外侧髁，稳定髋膝关节外侧。' }, 0.65);
       addNode(new T.BoxGeometry(0.026, 0.014, 0.008), 0xcbd5e1, pos(sgn * 0.44, 0.49, 0.04), { name: `${side}侧腕横韧带 · Flexor Retinaculum`, system: '结缔筋膜系统', desc: '跨过腕骨沟构成腕管顶壁，保护正中神经与屈指肌腱。' }, 0.78);
     }
+  }
+    */
   }
 
   tick(opts: {
@@ -174,8 +239,23 @@ export class R2OverlayEngine {
       this.rebuildExtraAnatomy(bodyBox);
       dirty = true;
     }
-    this.extraGroup.visible = ready && amount < 0.08 && !s.isolate;
-
+   //  this.extraGroup.visible = ready && amount < 0.08 && !s.isolate;
+const sysOn = (id: string) => { const v = s.systems; if (!v) return true; if (Array.isArray(v)) return v.includes(id); if (typeof v.has === 'function') return v.has(id); return !!v[id]; };
+    const anySysOn = (() => { const v = s.systems; if (!v) return true; if (Array.isArray(v)) return v.length > 0; if (typeof v.size === 'number') return v.size > 0; return Object.values(v).some(Boolean); })();
+    const baseVis = ready && amount < 0.08 && !s.isolate;
+    if (!baseVis || !anySysOn) {
+      this.lymphGroup.visible = false;
+    
+      this.endoGroup.visible = false;
+      this.connGroup.visible = false;
+      this.extraGroup.visible = false;
+    } else {
+      this.lymphGroup.visible = sysOn('lymphatic');
+      this.endoGroup.visible = sysOn('endocrine');
+      this.connGroup.visible = sysOn('articular') || sysOn('connective') || sysOn('skeletal');
+      this.extraGroup.visible = this.lymphGroup.visible || this.endoGroup.visible || this.connGroup.visible;
+    }
+    // 
     const fpt = s.focusPoint3D;
     const fKey = fpt ? (fpt.code || fpt.name || '') : '';
     const acuKey = `${ready ? 'R' : 'W'}|${sex || 'm'}|${s.showPoints3D ? '1' : '0'}|${s.activeMeridian || ''}|${s.points3D?.length || 0}|${fKey}|${nx ? 'X' : 'N'}`;
