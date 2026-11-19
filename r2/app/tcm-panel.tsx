@@ -96,7 +96,7 @@ interface TcmOverlayProps {
 tappedPoint3D?: Point3D | null;
 onClearTappedPoint3D?: () => void;
   needleXray?: boolean;
-  onToggleNeedleXray?: (next: boolean) => void;
+  onToggleNeedleXray?: (next: boolean) => void; showLigaments?: boolean; onToggleLigaments?: (next: boolean) => void;
 }
 
 export function TcmOverlay({
@@ -106,7 +106,7 @@ export function TcmOverlay({
   onSelectMeridian3D, onFocusPoint3D,
 tappedPoint3D,
 onClearTappedPoint3D,
-  needleXray = false,
+  needleXray = false, showLigaments = false, onToggleLigaments,
   onToggleNeedleXray
 }: TcmOverlayProps) {
   const [open, setOpen] = useState(false);
@@ -268,8 +268,9 @@ cursor: 'pointer',
               {onToggleNeedleXray && (
                 <button type="button" className={`tcm-theme-pill ${needleXray ? 'active' : ''}`} onClick={() => onToggleNeedleXray(!needleXray)}>
                   针刺透视{needleXray ? '开' : '关'}
-                </button>
-              )}
+                  </button>
+                )}
+                <button type="button" className={`tcm-theme-pill ${showLigaments ? 'active' : ''}`} onClick={() => onToggleLigaments?.(!showLigaments)}>关节韧带{showLigaments ? '开' : '关'}</button>
             </div>
 
             <div className="tcm-tabs">
