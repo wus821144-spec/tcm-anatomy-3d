@@ -221,7 +221,7 @@ if os.path.exists(an_p):
 sc_p = f"{ATLAS_DIR}/app/scene.tsx"
 st = open(sc_p, "r", encoding="utf-8").read()
 st = "import { createProceduralBump, setupStudioLighting, R2OverlayEngine } from './r2-scene-core';\n" + st
-st = st.replace("renderer.setClearColor('#f2f3f3')", "renderer.setClearColor('#05070b');setupStudioLighting(scene,renderer)")
+st = st.replace("renderer.setClearColor('#f2f3f3')", "renderer.setClearColor('#05070b')")
 for old_c in ("color:0xd5d9dc", "color:0xeeeeec", "color:0xe5e7eb"):
     st = st.replace(old_c, "color:0x05070b")
 st = st.replace("color:0x8c969f", "color:0xf59e0b").replace("color:0xa4aeb8", "color:0x38bdf8")
@@ -230,23 +230,23 @@ st = st.replace(
     "const materialFor=(system:string)=>{",
     "const muscleBump=createProceduralBump(true),boneBump=createProceduralBump(false);const sysMats:Record<string,any>={};\nconst materialFor=(system:string)=>{",
 )
-st = st.replace("return new T.MeshStandardMaterial({", "const mat=new T.MeshPhysicalMaterial({")
+st = st.replace("new T.MeshStandardMaterial({", "new T.MeshPhysicalMaterial({", 1)
 st = st.replace(
     "metalness:.08,roughness:.53,",
     "metalness:.06,roughness:system==='skeletal'?.62:.46,clearcoat:system==='arterial'||system==='venous'||system==='digestive'||system==='urinary'?.55:.12,bumpMap:system==='muscular'?muscleBump:system==='skeletal'?boneBump:null,bumpScale:system==='muscular'?.007:.004,",
 )
-st = re.sub(r"(const mat=new T\.MeshPhysicalMaterial\(\{[\s\S]*?\}\));", r"\1;sysMats[system]=mat;return mat;", st, count=1)
+# sysMats populated via scene.traverse
 st = st.replace(
     "g.setIndex(new T.BufferAttribute(new Uint32Array(buffer,p.indices,p.indexCount),1));",
     "g.setIndex(new T.BufferAttribute(new Uint32Array(buffer,p.indices,p.indexCount),1));const pa=new Float32Array(buffer,p.positions,p.vertexCount*3);const uvs=new Float32Array(p.vertexCount*2);for(let ui=0;ui<p.vertexCount;ui++){uvs[ui*2]=(pa[ui*3]+pa[ui*3+2])*2.5;uvs[ui*2+1]=pa[ui*3+1]*2.5;}g.setAttribute('uv',new T.BufferAttribute(uvs,2));",
 )
 st = st.replace(
     "const markers=new T.Points(markerGeometry,markerMaterial);",
-    "const r2Engine=new R2OverlayEngine({scene,camera,renderer,controls});\nconst markers=new T.Points(markerGeometry,markerMaterial);",
+    "setupStudioLighting(scene,renderer);const r2Engine=new R2OverlayEngine({scene,camera,renderer,controls});\nconst markers=new T.Points(markerGeometry,markerMaterial);",
 )
 st = st.replace(
     "controls.enableRotate=amount<.8;",
-    "if(r2Engine.tick({ready,sex:atlas.sex,state:s,amount,atlas,pickers,bounds,sysMats}))dirty=true;\n        controls.enableRotate=amount<.8;",
+    "if(ready&&!Object.keys(sysMats).length){scene.traverse((o:any)=>{if(o.isMesh&&o.material&&o.userData?.system)sysMats[o.userData.system]=o.material;});}if(r2Engine.tick({ready,sex:atlas.sex||'m',state:s,amount,atlas,pickers,bounds,sysMats}))dirty=true;\n        controls.enableRotate=amount<.8;",
 )
 open(sc_p, "w", encoding="utf-8").write(st)
 
@@ -267,7 +267,7 @@ ps = ps.replace(
     'aria-label="Open system layers"><Layers3 size={20}/><span>{t(\'systems\')}</span></Button><Button variant="ghost" className="tcm-dock-btn" onClick={()=>window.dispatchEvent(new CustomEvent(\'r2-open-tcm\'))}><span>经络穴位</span></Button>',
 )
 extra_card = "{extraInfo&&<div className=\"glass\" style={{position:'fixed',left:14,right:14,bottom:130,zIndex:36,maxWidth:440,borderRadius:16,padding:'12px 14px',borderColor:'var(--r2-accent)'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><div><div style={{fontSize:11,color:'var(--r2-accent)',fontWeight:600}}>{extraInfo.system}</div><div style={{fontSize:15,fontWeight:700,color:'#f8fafc'}}>{extraInfo.name}</div></div><button type=\"button\" className=\"tcm-close\" onClick={()=>setExtraInfo(null)}>×</button></div><p style={{fontSize:12,color:'#cbd5e1',margin:'6px 0 0',lineHeight:1.5}}>{extraInfo.desc}</p></div>}"
-overlay_jsx = "<TcmOverlay showPoints3D={state.showPoints3D!==false} onTogglePoints3D={v=>setState(s=>({...s,showPoints3D:v}))} onPointsLoaded={(pts:Point3D[])=>setState(s=>({...s,points3D:pts,showPoints3D:true}))} activeMeridian3D={state.activeMeridian} onSelectMeridian3D={m=>setState(s=>({...s,activeMeridian:m,showPoints3D:true}))} onFocusPoint3D={(pt:Point3D)=>setState(s=>({...s,focusPoint3D:pt,activeMeridian:pt.meridian,showPoints3D:true}))} tappedPoint3D={(state as any).tappedPoint3D||null} onClearTappedPoint3D={()=>setState(s=>({...s,tappedPoint3D:null}))} needleXray={!!(state as any).needleXray} onToggleNeedleXray={(v:boolean)=>setState(s=>({...s,needleXray:v,showPoints3D:true}))} />"
+overlay_jsx = "<TcmOverlay showPoints3D={(state as any).showPoints3D!==false} onTogglePoints3D={v=>setState(s=>({...s,showPoints3D:v}))} onPointsLoaded={(pts:Point3D[])=>setState(s=>({...s,points3D:pts,showPoints3D:true}))} activeMeridian3D={(state as any).activeMeridian} onSelectMeridian3D={m=>setState(s=>({...s,activeMeridian:m,showPoints3D:true}))} onFocusPoint3D={(pt:Point3D)=>setState(s=>({...s,focusPoint3D:pt,activeMeridian:pt.meridian,showPoints3D:true}))} tappedPoint3D={(state as any).tappedPoint3D||null} onClearTappedPoint3D={()=>setState(s=>({...s,tappedPoint3D:null}))} needleXray={!!(state as any).needleXray} onToggleNeedleXray={(v:boolean)=>setState(s=>({...s,needleXray:v,showPoints3D:true}))} />"
 ps = ps.replace("</main>;", f"  {extra_card}\n  {overlay_jsx}\n  </main>;")
 open(px_p, "w", encoding="utf-8").write(ps)
 print(f"Assembled Anatomy R1-1.0.2 cleanly; zh_dict entries: {len(zh_map)}")
