@@ -14,7 +14,7 @@ for gz in glob.glob(f"{ATLAS_DIR}/public/models/*.gz"):
 
 LYMPH_RE = re.compile(r"lymph|thoracic duct|thymus|tonsil|spleen", re.I)
 ENDO_RE = re.compile(r"thyroid|parathyroid|adrenal|suprarenal|pituitary|hypophysis|pineal", re.I)
-CONN_RE = re.compile(r"ligament|fascia|aponeurosis|retinaculum|meniscus|capsule", re.I)
+LIG_FMA_RE = CONN_RE = re.compile(r"ligament|retinaculum|capsule|interosseous membrane|aponeurosis|symphysis|meniscus|fascia", re.I); TRUE_LIG_RE = re.compile(r"ligament|retinaculum|capsule|interosseous membrane|symphysis|meniscus", re.I)
 ILIOTIBIAL_RE = re.compile(r"iliotibial|fascia|aponeurosis|tendon|retinaculum", re.I)
 for jp in glob.glob(f"{ATLAS_DIR}/public/models/*.json"):
     data = json.load(open(jp, encoding="utf-8"))
@@ -22,7 +22,8 @@ for jp in glob.glob(f"{ATLAS_DIR}/public/models/*.json"):
         ch.pop("gzip", None)
         ch.pop("gzipBytes", None)
     for part in data.get("parts", []):
-        if isinstance(part, dict) and (not part.get("system") or (part.get("system") == "skeletal" and (ILIOTIBIAL_RE.search(str(part.get("name", ""))) or CONN_RE.search(str(part.get("name", "")))))):
+        if isinstance(part, dict) and TRUE_LIG_RE.search(str(part.get("name", ""))): part["isLigament"] = True
+         if isinstance(part, dict) and (not part.get("system") or (part.get("system") == "skeletal" and (ILIOTIBIAL_RE.search(str(part.get("name", ""))) or CONN_RE.search(str(part.get("name", "")))))):
             nm = str(part.get("name", ""))
             if LYMPH_RE.search(nm):
                 part["system"] = "lymphatic"
@@ -252,7 +253,7 @@ st = st.replace(
 )
 st = st.replace(
     "controls.enableRotate=amount<.8;",
-    "if(ready&&!Object.keys(sysMats).length){scene.traverse((o:any)=>{if(o.isMesh&&o.material&&o.userData?.system)sysMats[o.userData.system]=o.material;});}if(r2Engine.tick({ready,sex:atlas.sex||'m',state:s,amount,atlas,pickers,bounds,sysMats}))dirty=true;\n        controls.enableRotate=amount<.8;",
+    "if(ready&&!Object.keys(sysMats).length){scene.traverse((o:any)=>{if(o.isMesh&&o.material&&o.userData?.system)sysMats[o.userData.system]=o.material;});}if(ready&&!sysMats['muscular']){pickers.forEach((pm:any,idx:number)=>{const sys=atlas.parts[idx]?.system;if(pm&&pm.material&&sys&&!sysMats[sys])sysMats[sys]=pm.material;});scene.traverse((o:any)=>{if(o.isMesh&&o.material&&o.name&&!sysMats[o.name])sysMats[o.name]=o.material;});}if(r2Engine.tick({ready,sex:atlas.sex||'m',state:s,amount,atlas,pickers,bounds,sysMats}))dirty=true;\n        controls.enableRotate=amount<.8;",
 )
 open(sc_p, "w", encoding="utf-8").write(st)
 
