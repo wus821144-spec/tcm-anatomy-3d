@@ -152,4 +152,15 @@ select, .model-select select { background: rgba(8, 12, 19, 0.94) !important; col
 .language-switch { display: none !important; }
 .identity h1 { font-size: clamp(19px, 4.8vw, 26px) !important; max-width: calc(100vw - 118px) !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-slot="select-trigger"], .sex-switch, .identity button, .studio select { background: rgba(10, 14, 22, 0.92) !important; color: #f8fafc !important; border: 1px solid rgba(255, 255, 255, 0.14) !important; }
-
+/* Ensure transparent HUD overlays never block 3D OrbitControls touch rotation/zoom */
+.hud, .hud-top, .top-bar, .studio > header, .vignette {
+  pointer-events: none !important;
+}
+.hud button, .hud select, .hud a, .hud input,
+.top-actions, .top-actions button,
+.identity select, .identity button, .sex-switch,
+.bottom-dock, .bottom-dock *,
+.layers-panel, .detail-sheet, .search-panel, .about-sheet,
+#landmark-detail-card {
+  pointer-events: auto !important;
+}
