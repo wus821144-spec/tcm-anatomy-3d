@@ -22,15 +22,17 @@ for jp in glob.glob(f"{ATLAS_DIR}/public/models/*.json"):
         ch.pop("gzip", None)
         ch.pop("gzipBytes", None)
     for part in data.get("parts", []):
-        if isinstance(part, dict) and TRUE_LIG_RE.search(str(part.get("name", ""))):
-            part["isLigament"] = True
-     if isinstance(part, dict) and (not part.get("system") or (part.get("system") == "skeletal" and (ILIOTIBIAL_RE.search(str(part.get("name", ""))) or CONN_RE.search(str(part.get("name", "")))))):
+        if not isinstance(part, dict):
+            continue
         nm = str(part.get("name", ""))
-        if LYMPH_RE.search(nm):
-            part["system"] = "lymphatic"
-        elif ENDO_RE.search(nm):
-            part["system"] = "endocrine"
-        elif ILIOTIBIAL_RE.search(nm) or CONN_RE.search(nm):
+        if TRUE_LIG_RE.search(nm):
+            part["isLigament"] = True
+        if not part.get("system"):
+            if LYMPH_RE.search(nm):
+                part["system"] = "lymphatic"
+            elif ENDO_RE.search(nm):
+                part["system"] = "endocrine"
+        elif part.get("system") == "skeletal" and (ILIOTIBIAL_RE.search(nm) or CONN_RE.search(nm)):
             part["system"] = "muscular"
     with open(jp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
