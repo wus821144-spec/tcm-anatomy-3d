@@ -124,9 +124,14 @@ def decimate_if_heavy(objs: list, max_faces: int = 12000):
             mod = obj.modifiers.new(name="R2Decimate", type="DECIMATE")
             mod.ratio = ratio
 
-
+def enable_all_collections(layer_coll):
+    layer_coll.exclude = False
+  for child in layer_coll.children:
+      enable_all_collections(child)
+    
 def export_group(objs: list, filepath: str):
-    if not objs:
+    objs = [o for o in objs if o.name in bpy.context.view_layer.objects]
+  if not objs:
         print(f"[extract_z_anatomy] WARNING: 0 objects for {filepath}")
         return
     for obj in objs:
@@ -136,8 +141,14 @@ def export_group(objs: list, filepath: str):
     decimate_if_heavy(objs)
     bpy.ops.object.select_all(action="DESELECT")
     for obj in objs:
-        obj.select_set(True)
-    bpy.context.view_layer.objects.active = objs[0]
+        try:
+            obj.select_set(True)
+        except RuntimeError:
+            pass
+    sel = [o for o in objs if o.select_get()]
+    if not sel:
+        return
+    bpy.context.view_layer.objects.active = sel[0]
     bpy.ops.export_scene.gltf(
         filepath=filepath,
         export_format="GLB",
@@ -160,6 +171,7 @@ def clean_struct_name(raw_name: str) -> str:
 
 
 def main():
+    enable_all_collections(bpy.context.view_layer.layer_collection)
     ta2_map = parse_ta2(TA2_CSV_PATH)
     obj_colls = get_collection_paths()
 
