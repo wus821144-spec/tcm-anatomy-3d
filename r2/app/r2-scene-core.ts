@@ -1,4 +1,5 @@
 import { loadZAnatomyMeshes } from './r2-z-anatomy-loader';
+import { formatBilingualName } from './bilingual-dict';
 import * as T from 'three';
 import { getBone3DPins } from './r2-bone-landmarks';
 import { buildFullLymphaticSystem, type ExtraAnatMeta } from './r2-lymphatic-builder';
@@ -76,7 +77,8 @@ export class R2OverlayEngine {
     osteoBox: T.Box3,
     zhDict: Record<string, string>,
     formatBilingual: (en: string, dict: Record<string, string>) => string,
-    onCatalogReady?: (items: any[]) => void
+    onCatalogReady?: (items: any[]) => void,
+    regionalBoxes?: { pelvis?: T.Box3; thorax?: T.Box3 }
   ): Promise<void> {
     if (this.zLoading || this.zLoadedSex === sex) return;
     this.zLoading = true;
@@ -85,7 +87,9 @@ export class R2OverlayEngine {
         osteoBox,
         zhDict,
         formatBilingual,
-        (obj, sysKey, center, meta) => this.registerAnatomicalMesh(obj, sysKey, center, meta)
+        (obj, sysKey, center, meta) => this.registerAnatomicalMesh(obj, sysKey, center, meta),
+        sex === 'female' ? 'female' : 'male',
+        regionalBoxes
       );
       if (!res) return;
       if (res.ligamentGroup.children.length > 0) {
@@ -302,18 +306,24 @@ if (!this.extraCatalogSent && this.extraCatalog.length && s.onExtraCatalog) { th
       this.lastExtraKey = extraKey;
       this.rebuildExtraAnatomy(bodyBox, atlas, bounds, pickers, sex === 'female' ? 'female' : 'male');
       const osteoBox = new T.Box3();
+      const pelvisBox = new T.Box3();
+      const thoraxBox = new T.Box3();
       bounds.forEach((b, idx) => {
-        if (atlas.parts[idx]?.system === 'skeletal') osteoBox.union(b);
+        const pt = atlas.parts[idx];
+        if (pt?.system === 'skeletal') {
+          osteoBox.union(b);
+            const nm = String(pt.name || '');
+            if (/pelvis|hip|ilium|ischium|pubis|sacrum/i.test(nm)) pelvisBox.union(b);
+            else if (/sternum|rib|clavicle|scapula|thoracic/i.test(nm)) thoraxBox.union(b);
+        }
       });
       void this.ensureZAnatomyLoaded(
         sex === 'female' ? 'female' : 'male',
         osteoBox.isEmpty() ? bodyBox : osteoBox,
         (s as any).zhDict || {},
-        (en: string, dict: Record<string, string>) => {
-          const k = en.toLowerCase();
-          return dict[k] ? `${dict[k]} · ${en}` : en;
-        },
-        s.onExtraCatalog
+        formatBilingualName,
+        s.onExtraCatalog,
+        { pelvis: pelvisBox, thorax: thoraxBox }
       );
       dirty = true;
     }const visArr = Array.isArray((s as any).visible) ? (s as any).visible as string[] : null; const anyVis = visArr ? visArr.length > 0 : true; const sysOn = (id: string) => visArr ? visArr.includes(id) : true; const baseVis = ready && !s.isolate; if (!baseVis || !anyVis) { this.extraGroup.visible = false; this.lymphGroup.visible = false; this.endoGroup.visible = false; this.connGroup.visible = false; } else { this.lymphGroup.visible = sysOn('lymphatic'); this.endoGroup.visible = sysOn('endocrine'); this.connGroup.visible = !!(s as any).showLigaments && anyVis && !s.isolate && amount < 0.08; this.extraGroup.visible = this.lymphGroup.visible || this.endoGroup.visible || this.connGroup.visible; } this.layerBlender.syncLayerBlending(this.handles.scene, sysMats, this.lymphGroup, this.lymphGroup.visible, sysOn('muscular'), nx, pickers, atlas); dirty = true; const sel = Array.isArray(s.selected) ? s.selected : []; const pinKey = (ready && anyVis && sel.length > 0 && amount <= 0.08) ? (String(sel[0]) + '|' + (s.isolate ? 'I' : 'N') + '|' + ((s as any).boneQuizMode ? 'Q' : 'L')) : ''; if (pinKey !== this.lastPinKey) { this.lastPinKey = pinKey; this.bonePinGroup.clear(); this.activePinMesh = null; if (pinKey) { const rawSel = sel[0]; const partIdx = typeof rawSel === 'number' ? rawSel : atlas.parts.findIndex((pt: any) => pt.id === rawSel || pt.concept === rawSel || pt.name === rawSel); const part = atlas.parts[partIdx]; const mesh = pickers[partIdx]; this.lastIsolateBone = s.isolate ? mesh : null; const box = bounds[partIdx]; if (part && mesh && box && !box.isEmpty()) { const pins = getBone3DPins(part.name, part.system); if (pins.length > 0) { const bMin = box.min; const bSize = box.getSize(new T.Vector3()); const bCenter = box.getCenter(new T.Vector3()); const maxDim = Math.max(bSize.x, bSize.y, bSize.z, 0.05); const rDot = s.isolate ? Math.max(0.0022, Math.min(0.0052, maxDim * 0.011)) : Math.max(0.0025, Math.min(0.0055, maxDim * 0.013)); const pinRc = new T.Raycaster(); for (const pin of pins) { const rawPos = new T.Vector3(bMin.x + (0.5 + pin.rel[0]) * bSize.x, bMin.y + pin.rel[1] * bSize.y, bMin.z + (0.5 + pin.rel[2]) * bSize.z); const dirToCenter = bCenter.clone().sub(rawPos); if (dirToCenter.lengthSq() < 1e-6) dirToCenter.set(0, 0, -1); dirToCenter.normalize(); const origin = rawPos.clone().sub(dirToCenter.clone().multiplyScalar(maxDim * 0.6)); pinRc.set(origin, dirToCenter); const hits = pinRc.intersectObject(mesh, false); const surfPos = hits.length > 0 ? hits[0].point.clone().addScaledVector(dirToCenter, -rDot * 0.35) : rawPos; const outDir = dirToCenter.clone().negate(); const normalTex = makePinSpriteTex(pin.color, false); const activeTex = makePinSpriteTex(pin.color, true); const core = new T.Sprite(new T.SpriteMaterial({ map: normalTex, transparent: true, depthTest: true, depthWrite: false })); const pinSz = s.isolate ? Math.max(0.011, Math.min(0.025, maxDim * 0.052)) : Math.max(0.013, Math.min(0.028, maxDim * 0.058)); core.scale.set(pinSz, pinSz, 1); core.renderOrder = 20; core.position.copy(surfPos).addScaledVector(outDir, Math.max(0.002, rDot * 0.4)); core.userData.pinInfo = { name: pin.name, system: part.name + ' · 骨骼标志', desc: pin.desc }; core.userData.normalTex = normalTex; core.userData.activeTex = activeTex; core.userData.baseScale = pinSz; if (s.isolate && !(s as any).boneQuizMode) { const lbl = makePinLabel(pin.name, pin.color); const lblH = Math.max(0.012, Math.min(0.026, maxDim * 0.055)); lbl.scale.set(lblH * 4, lblH, 1); lbl.position.copy(outDir.clone().multiplyScalar(rDot * 2.8)).add(new T.Vector3(0, lblH * 0.45, 0)); lbl.visible = false; lbl.userData.pinInfo = core.userData.pinInfo; lbl.userData.pinCore = core; core.userData.pinLabel = lbl; core.add(lbl); } this.bonePinGroup.add(core); const hitSphere = new T.Mesh(new T.SphereGeometry(Math.max(rDot * 3.8, 0.016), 8, 6), new T.MeshBasicMaterial({ opacity: 0, transparent: true, depthWrite: false })); hitSphere.position.copy(surfPos); hitSphere.userData = { pinInfo: core.userData.pinInfo, spriteRef: core }; this.bonePinGroup.add(hitSphere); } s.onBonePinsLoaded?.(pins); } } } else { s.onBonePinsLoaded?.([]); } dirty = true; } this.bonePinGroup.visible = !!pinKey && this.bonePinGroup.children.length > 0;
