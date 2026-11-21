@@ -125,51 +125,49 @@ def enable_all_collections(layer_coll):
 
 
 def export_group(objs: list, filepath: str):
-    temp_coll = None
-    objs = [o for o in objs if o.type == "MESH" and o.data and len(o.data.polygons) > 0]
-    if not objs:
+    valid = [o for o in objs if o.type == "MESH" and o.data and len(o.data.polygons) > 0]
+    if not valid:
         print(f"[extract_z_anatomy] WARNING: 0 objects for {filepath}")
         return
-        try:
-            unlinked = [o for o in objs if o.name not in bpy.context.view_layer.objects]
-            if unlinked:
-                temp_coll = bpy.data.collections.new("R2_Temp_Export")
-                bpy.context.scene.collection.children.link(temp_coll)
-                for o in unlinked:
-                    temp_coll.objects.link(o)
-        for obj in objs:
+    temp_coll = None
+    unlinked = [o for o in valid if o.name not in bpy.context.view_layer.objects]
+    if unlinked:
+        temp_coll = bpy.data.collections.new("R2_Temp_Export")
+        bpy.context.scene.collection.children.link(temp_coll)
+        for o in unlinked:
+            temp_coll.objects.link(o)
+    try:
+        for obj in valid:
             obj.hide_set(False)
             obj.hide_viewport = False
             obj.hide_render = False
-        decimate_if_heavy(objs)
+        decimate_if_heavy(valid)
         bpy.ops.object.select_all(action="DESELECT")
-        for obj in objs:
+        for obj in valid:
             try:
                 obj.select_set(True)
             except RuntimeError:
                 pass
-        sel = [o for o in objs if o.select_get()]
-        if not sel:
-            return
-        bpy.context.view_layer.objects.active = sel[0]
-        bpy.ops.export_scene.gltf(
-            filepath=filepath,
-            export_format="GLB",
-            use_selection=True,
-            export_yup=True,
-            export_apply=True,
-            export_normals=True,
-            export_materials="NONE",
-            export_animations=False,
-            export_cameras=False,
-            export_lights=False,
-        )
-        print(f"[extract_z_anatomy] Exported {len(sel)} meshes -> {filepath}")
+        sel = [o for o in valid if o.select_get()]
+        if sel:
+            bpy.context.view_layer.objects.active = sel[0]
+            bpy.ops.export_scene.gltf(
+                filepath=filepath,
+                export_format="GLB",
+                use_selection=True,
+                export_yup=True,
+                export_apply=True,
+                export_normals=True,
+                export_materials="NONE",
+                export_animations=False,
+                export_cameras=False,
+                export_lights=False,
+            )
+            print(f"[extract_z_anatomy] Exported {len(sel)} meshes -> {filepath}")
     finally:
         if temp_coll is not None:
             bpy.context.scene.collection.children.unlink(temp_coll)
             bpy.data.collections.remove(temp_coll)
-  
 
 
 def clean_struct_name(raw_name: str) -> str:
