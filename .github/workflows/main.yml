@@ -31,7 +31,7 @@ jobs:
       - name: Install Blender for Z-Anatomy Extraction
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender unzip
+          sudo apt-get install -y blender unzip python3-numpy
         
       
       - name: Clone Dual-Sex Open-Source Base & Run R1-1.0.2 Assembler
