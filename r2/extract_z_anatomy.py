@@ -127,27 +127,27 @@ def decimate_if_heavy(objs: list, max_faces: int = 12000):
 def enable_all_collections(layer_coll):
     layer_coll.exclude = False
   for child in layer_coll.children:
-      enable_all_collections(child)
+          enable_all_collections(child)
     
 def export_group(objs: list, filepath: str):
     objs = [o for o in objs if o.name in bpy.context.view_layer.objects]
   if not objs:
-        print(f"[extract_z_anatomy] WARNING: 0 objects for {filepath}")
-        return
+            print(f"[extract_z_anatomy] WARNING: 0 objects for {filepath}")
+            return
     for obj in objs:
-        obj.hide_set(False)
+           obj.hide_set(False)
         obj.hide_viewport = False
         obj.hide_render = False
-    decimate_if_heavy(objs)
+      decimate_if_heavy(objs)
     bpy.ops.object.select_all(action="DESELECT")
     for obj in objs:
         try:
-            obj.select_set(True)
-        except RuntimeError:
-            pass
+               obj.select_set(True)
+           except RuntimeError:
+                pass
     sel = [o for o in objs if o.select_get()]
     if not sel:
-        return
+          return
     bpy.context.view_layer.objects.active = sel[0]
     bpy.ops.export_scene.gltf(
         filepath=filepath,
