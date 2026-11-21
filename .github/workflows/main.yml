@@ -43,13 +43,13 @@ jobs:
           
       - name: Clone & Extract Z-Anatomy Real Ligaments & Lymphatic GLBs
         run: |
-        rm -rf /tmp/z-anatomy /tmp/z-anatomy-unzipped
-        git clone --depth 1 https://github.com/Z-Anatomy/Models-of-human-anatomy.git /tmp/z-anatomy
-        mkdir -p /tmp/z-anatomy-unzipped
-        unzip -q /tmp/z-anatomy/Z-Anatomy.zip -d /tmp/z-anatomy-unzipped
-        BLEND_FILE=$(find /tmp/z-anatomy-unzipped -name "*.blend" | head -n 1)
-        echo "Using Z-Anatomy blend: $BLEND_FILE"
-        blender --background "$BLEND_FILE" --python r2/extract_z_anatomy.py -- \
+          rm -rf /tmp/z-anatomy /tmp/z-anatomy-unzipped
+          git clone --depth 1 https://github.com/Z-Anatomy/Models-of-human-anatomy.git /tmp/z-anatomy
+          mkdir -p /tmp/z-anatomy-unzipped
+          unzip -q /tmp/z-anatomy/Z-Anatomy.zip -d /tmp/z-anatomy-unzipped
+          BLEND_FILE=$(find /tmp/z-anatomy-unzipped -name "*.blend" | head -n 1)
+         echo "Using Z-Anatomy blend: $BLEND_FILE"
+          blender --background "$BLEND_FILE" --python r2/extract_z_anatomy.py -- \
             /tmp/atlas-r2/public/models \
             /tmp/z-anatomy/TA2.csv \
             /tmp/atlas-r2/public/data
