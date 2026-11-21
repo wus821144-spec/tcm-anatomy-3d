@@ -1,4 +1,4 @@
-name: Build Anatomy R1-1.0.2 APK
+name: Build Anatomy R1-1.0.3 APK
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout Anatomy R1-1.0.2 Overlay & TCM Data
@@ -28,13 +28,33 @@ jobs:
       - name: Setup Gradle Cache
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Install Blender for Z-Anatomy Extraction
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender unzip
+        
+      
       - name: Clone Dual-Sex Open-Source Base & Run R1-1.0.2 Assembler
         run: |
           rm -rf /tmp/atlas-r2 /tmp/zh-bp3d
           git clone --depth 1 https://github.com/slorksmo/Human-Atlas.git /tmp/atlas-r2
           git clone --depth 1 https://github.com/jixiangying/anatomy.git /tmp/zh-bp3d || true
           python3 r2/assemble_r1_0_1.py
-
+          
+      - name: Clone & Extract Z-Anatomy Real Ligaments & Lymphatic GLBs
+        run: |
+        rm -rf /tmp/z-anatomy /tmp/z-anatomy-unzipped
+        git clone --depth 1 https://github.com/Z-Anatomy/Models-of-human-anatomy.git /tmp/z-anatomy
+        mkdir -p /tmp/z-anatomy-unzipped
+        unzip -q /tmp/z-anatomy/Z-Anatomy.zip -d /tmp/z-anatomy-unzipped
+        BLEND_FILE=$(find /tmp/z-anatomy-unzipped -name "*.blend" | head -n 1)
+        echo "Using Z-Anatomy blend: $BLEND_FILE"
+        blender --background "$BLEND_FILE" --python r2/extract_z_anatomy.py -- \
+            /tmp/atlas-r2/public/models \
+            /tmp/z-anatomy/TA2.csv \
+            /tmp/atlas-r2/public/data
+          ls -lh /tmp/atlas-r2/public/models/z_*.glb /tmp/atlas-r2/public/data/z_meta.json
+      
       - name: Typecheck, Bundle & Build Signed Anatomy R1-1.0.2 APK
         run: |
           cd /tmp/atlas-r2
@@ -46,7 +66,7 @@ jobs:
           import type { CapacitorConfig } from '@capacitor/cli';
           const config: CapacitorConfig = {
             appId: 'com.tcm.anatomy3d',
-            appName: 'Anatomy R1-1.0.2',
+            appName: 'Anatomy R1-1.0.3',
             webDir: 'dist',
             android: { allowMixedContent: true }
           };
@@ -54,19 +74,19 @@ jobs:
           EOF
           npx cap add android
           npx cap sync android
-          python3 -c 'import re; p="android/app/build.gradle"; s=open(p).read(); s=re.sub(r"versionCode\s+\d+","versionCode 102",s); s=re.sub(r"versionName\s+\"[^\"]*\"","versionName \"1.0.2\"",s); sc="    signingConfigs {\n        release {\n            storeFile file(\x27/tmp/tcm_release.jks\x27)\n            storePassword \x27tcm3dpass\x27\n            keyAlias \x27tcm3d\x27\n            keyPassword \x27tcm3dpass\x27\n            enableV1Signing true\n            enableV2Signing true\n            enableV3Signing true\n        }\n    }\n"; s=re.sub(r"([ \t]*)buildTypes\s*\{",lambda m:sc+m.group(0),s,count=1); s=re.sub(r"(buildTypes\s*\{\s*release\s*\{)",r"\1\n            signingConfig signingConfigs.release",s,count=1); open(p,"w").write(s)'
+          python3 -c 'import re; p="android/app/build.gradle"; s=open(p).read(); s=re.sub(r"versionCode\s+\d+","versionCode 103",s); s=re.sub(r"versionName\s+\"[^\"]*\"","versionName \"1.0.3\"",s); sc="    signingConfigs {\n        release {\n            storeFile file(\x27/tmp/tcm_release.jks\x27)\n            storePassword \x27tcm3dpass\x27\n            keyAlias \x27tcm3d\x27\n            keyPassword \x27tcm3dpass\x27\n            enableV1Signing true\n            enableV2Signing true\n            enableV3Signing true\n        }\n    }\n"; s=re.sub(r"([ \t]*)buildTypes\s*\{",lambda m:sc+m.group(0),s,count=1); s=re.sub(r"(buildTypes\s*\{\s*release\s*\{)",r"\1\n            signingConfig signingConfigs.release",s,count=1); open(p,"w").write(s)'
           cd android
           chmod +x gradlew
           if false; then
           ./gradlew assembleRelease 
           APK_RAW=app/build/outputs/apk/release/app-release-unsigned.apk
-          APK_OUT=app/build/outputs/apk/release/Anatomy-R1-1.0.2.apk
+          APK_OUT=app/build/outputs/apk/release/Anatomy-R1-1.0.3.apk
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
           fi
           cat << 'JKS' | base64 -d > /tmp/tcm_release.jks
           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
           JKS
-          ./gradlew assembleRelease && APK_RAW=app/build/outputs/apk/release/app-release.apk && ([ -f "$APK_RAW" ] || APK_RAW=app/build/outputs/apk/release/app-release-unsigned.apk) && APK_OUT=app/build/outputs/apk/release/Anatomy-R1-1.0.2.apk && BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1) && cp "$APK_RAW" /tmp/app-cleaned.apk && (zip -d /tmp/app-cleaned.apk "META-INF/com/android/build/gradle/*" "META-INF/*.version" "META-INF/version-control-info.textproto" |"META-INF/services/*" | true) && "$BUILD_TOOLS/zipalign" -f -p 4 /tmp/app-cleaned.apk /tmp/app-aligned.apk && "$BUILD_TOOLS/apksigner" sign --min-sdk-version 21 --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --ks /tmp/tcm_release.jks --ks-key-alias tcm3d --ks-pass pass:tcm3dpass --key-pass pass:tcm3dpass --out "$APK_OUT" /tmp/app-aligned.apk && if false; then
+          ./gradlew assembleRelease && APK_RAW=app/build/outputs/apk/release/app-release.apk && ([ -f "$APK_RAW" ] || APK_RAW=app/build/outputs/apk/release/app-release-unsigned.apk) && APK_OUT=app/build/outputs/apk/release/Anatomy-R1-1.0.3.apk && BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1) && cp "$APK_RAW" /tmp/app-cleaned.apk && (zip -d /tmp/app-cleaned.apk "META-INF/com/android/build/gradle/*" "META-INF/*.version" "META-INF/version-control-info.textproto" |"META-INF/services/*" | true) && "$BUILD_TOOLS/zipalign" -f -p 4 /tmp/app-cleaned.apk /tmp/app-aligned.apk && "$BUILD_TOOLS/apksigner" sign --min-sdk-version 21 --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --ks /tmp/tcm_release.jks --ks-key-alias tcm3d --ks-pass pass:tcm3dpass --key-pass pass:tcm3dpass --out "$APK_OUT" /tmp/app-aligned.apk && if false; then
           "$BUILD_TOOLS/zipalign" -f -p 4 "$APK_RAW" /tmp/app-aligned.apk
           "$BUILD_TOOLS/apksigner" sign --min-sdk-version 21  --ks /tmp/tcm_release.jks --ks-key-alias tcm3d --ks-pass pass:tcm3dpass --key-pass pass:tcm3dpass --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out "$APK_OUT" /tmp/app-aligned.apk
           fi
@@ -79,6 +99,6 @@ jobs:
       - name: Upload Signed Anatomy R1-1.0.2 APK
         uses: actions/upload-artifact@v4
         with:
-          name: Anatomy-R1-1.0.2-apk
-          path: /tmp/atlas-r2/android/app/build/outputs/apk/release/Anatomy-R1-1.0.2.apk
+          name: Anatomy-R1-1.0.3-apk
+          path: /tmp/atlas-r2/android/app/build/outputs/apk/release/Anatomy-R1-1.0.3.apk
           compression-level: 0
