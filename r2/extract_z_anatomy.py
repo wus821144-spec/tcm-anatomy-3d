@@ -125,10 +125,17 @@ def enable_all_collections(layer_coll):
 
 
 def export_group(objs: list, filepath: str):
-    objs = [o for o in objs if o.name in bpy.context.view_layer.objects]
+    objs = [o for o in objs if o.type == "MESH" and o.data and len(o.data.polygons) > 0]
     if not objs:
         print(f"[extract_z_anatomy] WARNING: 0 objects for {filepath}")
         return
+        temp_coll = None
+        unlinked = [o for o in objs if o.name not in bpy.context.view_layer.objects]
+        if unlinked:
+            temp_coll = bpy.data.collections.new("R2_Temp_Export")
+            bpy.context.scene.collection.children.link(temp_coll)
+            for o in unlinked:
+                temp_coll.objects.link(o)
     for obj in objs:
         obj.hide_set(False)
         obj.hide_viewport = False
@@ -142,6 +149,9 @@ def export_group(objs: list, filepath: str):
             pass
     sel = [o for o in objs if o.select_get()]
     if not sel:
+        if temp_coll is not None:
+            bpy.context.scene.collection.children.unlink(temp_coll)
+            bpy.data.collections.remove(temp_coll)
         return
     bpy.context.view_layer.objects.active = sel[0]
     bpy.ops.export_scene.gltf(
@@ -156,6 +166,9 @@ def export_group(objs: list, filepath: str):
         export_cameras=False,
         export_lights=False,
     )
+    if temp_coll is not None:
+        bpy.context.scene.collection.children.unlink(temp_coll)
+        bpy.data.collections.remove(temp_coll)
     print(f"[extract_z_anatomy] Exported {len(sel)} meshes -> {filepath}")
 
 
