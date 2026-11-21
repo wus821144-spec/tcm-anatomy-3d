@@ -123,10 +123,10 @@ export async function loadZAnatomyMeshes(
     ) => {
       if (!gltf?.scene) return;
       alignGroup(gltf.scene);
-      targetGroup.add(gltf.scene);
-
-      gltf.scene.traverse((child: any) => {
-        if (!child.isMesh) return;
+     const meshes: THREE.Mesh[] = [];
+      gltf.scene.traverse((c: any) => { if (c.isMesh) meshes.push(c); });
+      for (const child of meshes) {
+        targetGroup.attach(child);
         const entry = meta.items[child.name] || {
           system: sysKey,
           en: child.name.replace(/_\d+$/, '').replace(/_/g, ' '),
@@ -166,7 +166,7 @@ export async function loadZAnatomyMeshes(
           center,
           mesh: child,
         });
-      });
+      }
     };
 
     processGltf(ligGltf, ligamentGroup, 'ligaments');
