@@ -20,6 +20,11 @@ export interface ZMetaFile {
   items: Record<string, ZMetaEntry>;
 }
 
+export interface RegionalBoneBoxes {
+  pelvis?: THREE.Box3;
+  thorax?: THREE.Box3;
+}
+
 export interface ZAnatomyLoadResult {
   ligamentGroup: THREE.Group;
   lymphGroup: THREE.Group;
@@ -33,6 +38,18 @@ export interface ZAnatomyLoadResult {
     center: THREE.Vector3;
     mesh: THREE.Mesh;
   }>;
+}
+
+let cachedZhDict: Record<string, string> | null = null;
+
+function normalizeZName(raw: string): string {
+  let s = raw.replace(/\.\d{3}$/, '').trim();
+  const isRight = /\.r\b|\b_r$/i.test(s);
+  const isLeft = /\.l\b|\b_l$/i.test(s);
+  s = s.replace(/\.(r|l|el|ol|e|o)\b/gi, '').replace(/[_-]+/g, ' ').trim();
+  if (isRight && !/^right\b/i.test(s)) s = `Right ${s}`;
+  if (isLeft && !/^left\b/i.test(s)) s = `Left ${s}`;
+  return s;
 }
 
 function createLigamentMaterial(): THREE.MeshPhysicalMaterial {
@@ -67,9 +84,20 @@ export async function loadZAnatomyMeshes(
   targetOsteoBox: THREE.Box3,
   zhDict: Record<string, string>,
   formatBilingual: (en: string, dict: Record<string, string>) => string,
-  registerMesh: (obj: THREE.Object3D, systemKey: string, bodyCenter: THREE.Vector3, meta?: any) => void
+  registerMesh: (obj: THREE.Object3D, systemKey: string, bodyCenter: THREE.Vector3, meta?: any) => void,
+  sex: 'male' | 'female' = 'male',
+  regionalBoxes?: RegionalBoneBoxes
 ): Promise<ZAnatomyLoadResult | null> {
   try {
+    let activeDict = zhDict && Object.keys(zhDict).length > 0 ? zhDict : cachedZhDict || {};
+    if (Object.keys(activeDict).length === 0) {
+      const dictResp = await fetch('/data/zh_dict.json').catch(() => null);
+      if (dictResp && dictResp.ok) {
+        activeDict = await dictResp.json();
+        cachedZhDict = activeDict;
+      }
+    }
+
     const metaResp = await fetch('/data/z_meta.json');
     if (!metaResp.ok) return null;
     const meta: ZMetaFile = await metaResp.json();
@@ -107,6 +135,11 @@ export async function loadZAnatomyMeshes(
       return root;
     };
 
+    const pelvisBox = regionalBoxes?.pelvis && !regionalBoxes.pelvis.isEmpty() ? regionalBoxes.pelvis : null;
+    const thoraxBox = regionalBoxes?.thorax && !regionalBoxes.thorax.isEmpty() ? regionalBoxes.thorax : null;
+    const pelvisCenter = pelvisBox ? pelvisBox.getCenter(new THREE.Vector3()) : null;
+    const thoraxCenter = thoraxBox ? thoraxBox.getCenter(new THREE.Vector3()) : null;
+
     const ligamentGroup = new THREE.Group();
     ligamentGroup.name = 'z_ligaments_group';
     const lymphGroup = new THREE.Group();
@@ -123,21 +156,41 @@ export async function loadZAnatomyMeshes(
     ) => {
       if (!gltf?.scene) return;
       alignGroup(gltf.scene);
-     const meshes: THREE.Mesh[] = [];
-      gltf.scene.traverse((c: any) => { if (c.isMesh) meshes.push(c); });
+
+      const meshes: THREE.Mesh[] = [];
+      gltf.scene.traverse((c: any) => {
+        if (c.isMesh) meshes.push(c);
+      });
+
       for (const child of meshes) {
         targetGroup.attach(child);
-        const entry = meta.items[child.name] || {
+
+        if (sex === 'female') {
+          const preBox = new THREE.Box3().setFromObject(child);
+          const preC = preBox.getCenter(new THREE.Vector3());
+          const relY = (preC.y - targetOsteoBox.min.y) / Math.max(1e-4, tSize.y);
+          if (pelvisCenter && relY >= 0.42 && relY <= 0.56) {
+            child.position.x += (pelvisCenter.x - tCenter.x) * 0.5;
+            child.position.z += (pelvisCenter.z - tCenter.z) * 0.35;
+          } else if (thoraxCenter && relY >= 0.62 && relY <= 0.84) {
+            child.position.x += (thoraxCenter.x - tCenter.x) * 0.4;
+            child.position.z += (thoraxCenter.z - tCenter.z) * 0.35;
+          }
+          child.updateMatrixWorld(true);
+        }
+
+        const rawEntry = meta.items[child.name] || {
           system: sysKey,
-          en: child.name.replace(/_\d+$/, '').replace(/_/g, ' '),
+          en: child.name,
           la: '',
           ta2: '',
         };
-        const isNode = sysKey === 'lymphatic' && /nod|tonsil|thymus|spleen/i.test(entry.en);
+        const cleanEn = normalizeZName(rawEntry.en || child.name);
+        const isNode = sysKey === 'lymphatic' && /nod|tonsil|thymus|spleen/i.test(cleanEn);
         child.material = sysKey === 'ligaments' ? ligMat.clone() : createLymphMaterial(isNode);
         child.renderOrder = sysKey === 'lymphatic' ? 4 : 2;
 
-        const zhDisplay = formatBilingual(entry.en, zhDict);
+        const zhDisplay = formatBilingual(cleanEn, activeDict);
         const box = new THREE.Box3().setFromObject(child);
         const center = box.getCenter(new THREE.Vector3());
 
@@ -146,13 +199,13 @@ export async function loadZAnatomyMeshes(
           r2Extra: true,
           system: sysKey,
           name: zhDisplay,
-          enName: entry.en,
-          laName: entry.la,
-          ta2: entry.ta2,
+          enName: cleanEn,
+          laName: rawEntry.la,
+          ta2: rawEntry.ta2,
           desc:
             sysKey === 'ligaments'
-              ? `标准术语：${entry.la || entry.en}${entry.ta2 ? ` (${entry.ta2})` : ''}。源自 Z-Anatomy 真实关节韧带网格，已与当前骨骼坐标系刚性对齐。`
-              : `标准术语：${entry.la || entry.en}${entry.ta2 ? ` (${entry.ta2})` : ''}。源自 Z-Anatomy 真实淋巴系统网格，支持与肌肉半透明透视融合。`,
+              ? `标准术语：${rawEntry.la || cleanEn}${rawEntry.ta2 ? ` (${rawEntry.ta2})` : ''}。源自 Z-Anatomy 真实关节韧带网格，已与当前骨骼坐标系对齐。`
+              : `标准术语：${rawEntry.la || cleanEn}${rawEntry.ta2 ? ` (${rawEntry.ta2})` : ''}。源自 Z-Anatomy 真实淋巴系统网格，支持与肌肉半透明透视融合。`,
         };
 
         registerMesh(child, sysKey, tCenter, child.userData);
@@ -160,8 +213,8 @@ export async function loadZAnatomyMeshes(
         catalog.push({
           id: `z_${sysKey}_${child.name}`,
           name: zhDisplay,
-          enName: entry.en,
-          laName: entry.la,
+          enName: cleanEn,
+          laName: rawEntry.la,
           system: sysKey,
           center,
           mesh: child,
