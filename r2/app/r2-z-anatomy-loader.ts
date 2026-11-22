@@ -54,15 +54,15 @@ function normalizeZName(raw: string): string {
 
 function createLigamentMaterial(): THREE.MeshPhysicalMaterial {
   return new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color('#dce8f5'),
-    emissive: new THREE.Color('#0ea5e9'),
-    emissiveIntensity: 0.06,
-    roughness: 0.52,
-    metalness: 0.04,
-    clearcoat: 0.25,
+    color: new THREE.Color('#e8e6dc'),
+    emissive: new THREE.Color('#000000'),
+    emissiveIntensity: 0,
+    roughness: 0.55,
+    metalness: 0.02,
+    clearcoat: 0.15,
     clearcoatRoughness: 0.45,
-    transparent: true,
-    opacity: 0.88,
+    transparent: false,
+    opacity: 1.0,
     side: THREE.DoubleSide,
   });
 }
