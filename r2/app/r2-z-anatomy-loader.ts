@@ -101,7 +101,12 @@ export async function loadZAnatomyMeshes(
     const metaResp = await fetch('/data/z_meta.json');
     if (!metaResp.ok) return null;
     const meta: ZMetaFile = await metaResp.json();
-
+    const metaBySanitized = new Map<string, { rawKey: string; entry: ZMetaEntry }>();
+    for (const [k, v] of Object.entries(meta.items || {})) {
+      const san = k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      metaBySanitized.set(san, { rawKey: k, entry: v });
+    }
+    
     const loader = new GLTFLoader();
     const [ligGltf, lymphGltf] = await Promise.all([
       loader.loadAsync('/models/z_ligaments.glb').catch(() => null),
@@ -178,14 +183,15 @@ export async function loadZAnatomyMeshes(
           }
           child.updateMatrixWorld(true);
         }
-
-        const rawEntry = meta.items[child.name] || {
+        const direct = meta.items[child.name];
+        const fuzzy = !direct ? metaBySanitized.get(child.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()) : undefined;
+        const rawEntry = direct || fuzzy?.entry || {
           system: sysKey,
           en: child.name,
           la: '',
           ta2: '',
         };
-        const cleanEn = normalizeZName(rawEntry.en || child.name);
+        const cleanEn = normalizeZName(fuzzy?.rawKey || rawEntry.en || child.name);
         const isNode = sysKey === 'lymphatic' && /nod|tonsil|thymus|spleen/i.test(cleanEn);
         child.material = sysKey === 'ligaments' ? ligMat.clone() : createLymphMaterial(isNode);
         child.renderOrder = sysKey === 'lymphatic' ? 4 : 2;
