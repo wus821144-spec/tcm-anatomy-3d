@@ -19,7 +19,6 @@ OUT_DATA_DIR = args[2] if len(args) > 2 else "/tmp/atlas-r2/public/data"
 os.makedirs(OUT_MODELS_DIR, exist_ok=True)
 os.makedirs(OUT_DATA_DIR, exist_ok=True)
 
-# Exclude 3D legend text, labels, arrows, cameras, and UI helpers inside Z-Anatomy.blend
 JUNK_NAME_RE = re.compile(
     r"^(joints|lymphoid organs|lymphatic|arthrology|osteology|myology|angiology|"
     r"neurology|splanchnology|cardiovascular|nervous|muscular|skeletal|digestive|"
@@ -29,10 +28,18 @@ JUNK_NAME_RE = re.compile(
 )
 JUNK_PART_RE = re.compile(r"\b(label|text|legend|header|title|arrow|pointer|callout)\b", re.I)
 
+# Strictly match true lymphatic nodes, vessels, ducts, and lymphoid organs by object name
 LYMPH_NAME_RE = re.compile(
-    r"lymph|nodus|nodi|thoracic duct|cisterna chyli|thymus|spleen|tonsil|"
-    r"waldeyer|jugular trunk|subclavian trunk|bronchomediastinal|lumbar trunk|"
-    r"intestinal trunk|appendix|splenic|chyle|peyer",
+    r"lymph|nodus|nodi|\bnode\b|\bnodes\b|thoracic duct|cisterna chyli|thymus|spleen|"
+    r"tonsil|waldeyer|jugular trunk|subclavian trunk|bronchomediastinal|lumbar trunk|"
+    r"intestinal trunk|splenic|chyle|peyer",
+    re.I,
+)
+LYMPH_EXCLUDE_RE = re.compile(
+    r"joint|ligament|lig\.|capsule|cartilage|suture|disc|skull|cranium|hand|foot|"
+    r"knee|hip|rib|vertebra|spine|tendon|bursa|meniscus|fascia|aponeurosis|"
+    r"retinaculum|membrane|labrum|symphysis|interosseous|sinus node|atrioventricular node|"
+    r"sinoatrial node|ranvier|bone|muscle",
     re.I,
 )
 LIG_NAME_RE = re.compile(
@@ -42,10 +49,12 @@ LIG_NAME_RE = re.compile(
     r"intervertebral disc|articular disc|joint capsule|membrane of",
     re.I,
 )
+# Include cranial vault (parietal/frontal/occipital) & foot bones (calcaneus/talus/metatarsal/phalanx)
+# so osteoBounds spans 100% of true head-to-foot height (no ~10% vertical overshoot)
 CORE_BONE_RE = re.compile(
-    r"^(left |right )?(femur|humerus|tibia|fibula|radius|ulna|sternum|sacrum|"
-    r"clavicle|scapula|hip bone|ilium|ischium|pubis|cranium|skull|mandible|"
-    r"patella|talus|calcaneus)\b|\b(femur|humerus|tibia|sternum|sacrum|clavicle|hip bone)\b",
+    r"\b(parietal|frontal|occipital|temporal|femur|humerus|tibia|fibula|radius|ulna|"
+    r"sternum|sacrum|clavicle|scapula|hip bone|ilium|ischium|pubis|cranium|skull|"
+    r"mandible|patella|talus|calcaneus|metatarsal|proximal phalanx of)\b",
     re.I,
 )
 
@@ -54,13 +63,11 @@ def is_junk_mesh(obj) -> bool:
     if obj.type != "MESH" or not obj.data or len(obj.data.polygons) == 0:
         return True
     nm = obj.name.strip()
-    # Filter out all-caps 3D legend titles (e.g. "JOINTS", "LYMPHOID ORGANS")
     alpha = re.sub(r"[^A-Za-z]", "", nm)
     if len(alpha) >= 4 and alpha.isupper():
         return True
     if JUNK_NAME_RE.search(nm) or JUNK_PART_RE.search(nm):
         return True
-    # Filter out flat 2D text planes (extremely thin in one axis with wide aspect)
     return False
 
 
@@ -110,7 +117,6 @@ def obj_center_yup(obj) -> list:
 def compute_bounds_yup(objs: list) -> dict:
     if not objs:
         return {"min": [-0.3, 0.0, -0.2], "max": [0.3, 1.7, 0.2], "center": [0, 0.85, 0], "size": [0.6, 1.7, 0.4]}
-    # Compute median X/Z of core bones to reject any stray far-away meshes
     centers = [obj_center_yup(o) for o in objs]
     xs = sorted(c[0] for c in centers)
     zs = sorted(c[2] for c in centers)
@@ -161,7 +167,6 @@ def in_body_envelope(obj, osteo_bounds: dict) -> bool:
 
 
 def decimate_if_heavy(objs: list, max_faces: int = 12000):
-    bpy.ops.object.select_all(action="DESELECT")
     for obj in objs:
         if obj.type != "MESH" or not obj.data:
             continue
@@ -176,6 +181,14 @@ def enable_all_collections(layer_coll):
     layer_coll.exclude = False
     for child in layer_coll.children:
         enable_all_collections(child)
+
+
+def deselect_everything():
+    for o in bpy.data.objects:
+        try:
+            o.select_set(False)
+        except RuntimeError:
+            pass
 
 
 def export_group(objs: list, filepath: str):
@@ -196,7 +209,7 @@ def export_group(objs: list, filepath: str):
             obj.hide_viewport = False
             obj.hide_render = False
         decimate_if_heavy(valid)
-        bpy.ops.object.select_all(action="DESELECT")
+        deselect_everything()
         for obj in valid:
             try:
                 obj.select_set(True)
@@ -219,6 +232,7 @@ def export_group(objs: list, filepath: str):
             )
             print(f"[extract_z_anatomy] Exported {len(sel)} meshes -> {filepath}")
     finally:
+        deselect_everything()
         if temp_coll is not None:
             bpy.context.scene.collection.children.unlink(temp_coll)
             bpy.data.collections.remove(temp_coll)
@@ -239,7 +253,7 @@ def main():
         if is_junk_mesh(obj):
             continue
         nm = obj.name
-        if CORE_BONE_RE.search(nm) and not LIG_NAME_RE.search(nm) and not re.search(r"\b(muscle|artery|vein|nerve)\b", nm, re.I):
+        if CORE_BONE_RE.search(nm) and not LIG_NAME_RE.search(nm) and not re.search(r"\b(muscle|artery|vein|nerve|ligament|suture|cartilage)\b", nm, re.I):
             osteo_objs.append(obj)
 
     osteo_bounds = compute_bounds_yup(osteo_objs)
@@ -256,13 +270,10 @@ def main():
         nm = obj.name
         leaf_str = " | ".join(leaf_colls.get(nm, []))
 
-        is_lig = bool(LIG_NAME_RE.search(nm)) or bool(re.search(r"ligament|arthrolog|joint", leaf_str, re.I))
-        is_lymph = bool(LYMPH_NAME_RE.search(nm)) or bool(re.search(r"lymph", leaf_str, re.I))
-
-        # Strict separation: ligaments/capsules NEVER enter lymph_objs
-        if is_lymph and not LIG_NAME_RE.search(nm) and not re.search(r"joint|arthrolog|ligament", leaf_str, re.I):
+        # Strictly classify lymphatics by object name ONLY (never by loose collection bleed)
+        if LYMPH_NAME_RE.search(nm) and not LYMPH_EXCLUDE_RE.search(nm):
             lymph_objs.append(obj)
-        elif is_lig and not LYMPH_NAME_RE.search(nm) and not re.search(r"\b(muscle|musculus|bone)\b", nm, re.I):
+        elif (LIG_NAME_RE.search(nm) or re.search(r"ligament|arthrolog|joint", leaf_str, re.I)) and not LYMPH_NAME_RE.search(nm) and not re.search(r"\b(muscle|musculus|bone|node|nodes)\b", nm, re.I):
             lig_objs.append(obj)
 
     print("[extract_z_anatomy] Sample ligaments:", [o.name for o in lig_objs[:15]])
