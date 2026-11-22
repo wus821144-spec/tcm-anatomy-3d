@@ -30,7 +30,7 @@ JUNK_PART_RE = re.compile(r"\b(label|text|legend|header|title|arrow|pointer|call
 
 # Strictly match true lymphatic nodes, vessels, ducts, and lymphoid organs by object name
 LYMPH_NAME_RE = re.compile(
-    r"lymph|nodus|nodi|\bnode\b|\bnodes\b|thoracic duct|cisterna chyli|thymus|spleen|"
+    r"lymph|nodus|nodi|\bnode\b|\bnodes\b|thoracic duct|cisterna chyli|"
     r"tonsil|waldeyer|jugular trunk|subclavian trunk|bronchomediastinal|lumbar trunk|"
     r"intestinal trunk|splenic|chyle|peyer",
     re.I,
@@ -39,7 +39,7 @@ LYMPH_EXCLUDE_RE = re.compile(
     r"joint|ligament|lig\.|capsule|cartilage|suture|disc|skull|cranium|hand|foot|"
     r"knee|hip|rib|vertebra|spine|tendon|bursa|meniscus|fascia|aponeurosis|"
     r"retinaculum|membrane|labrum|symphysis|interosseous|sinus node|atrioventricular node|"
-    r"sinoatrial node|ranvier|bone|muscle",
+    r"sinoatrial node|ranvier|bone|muscle|spleen|thymus",
     re.I,
 )
 LIG_NAME_RE = re.compile(
