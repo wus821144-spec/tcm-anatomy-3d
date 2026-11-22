@@ -97,7 +97,7 @@ export class R2OverlayEngine {
         this.connGroup.add(res.ligamentGroup);
       }
       if (res.lymphGroup.children.length > 0) {
-        this.lymphGroup.clear();
+        if (res.lymphGroup.children.length >= 25) this.lymphGroup.clear();
         this.lymphGroup.add(res.lymphGroup);
       }
       for (const item of res.catalog) {
